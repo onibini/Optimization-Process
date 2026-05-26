@@ -1,0 +1,83 @@
+
+WAMITLOG.TXT file from WAMIT run:  17-May-2026 14:24:25
+
+ Input file config.wam          
+WEC Configuration
+NCPU=8
+RAMGBMAX=16
+USERID_PATH=C:\WAMITv7
+
+ Input file wec.cfg             
+WEC Optimization Configuration
+ipltdat=1
+NUMHDR=1
+IPERIN=2
+IPEROUT=2
+IWALLX0=0
+ISOR=0
+ISOLVE=1
+MAXITT=100
+ISCATT=0
+IALTERC=1
+ILOC=1
+
+POTEN run started:  17-May-2026 14:24:25
+
+ Input file wec.pot             
+WEC Optimization Array Analysis
+33.0                 HBOT
+0 0                  IRAD IDIFF
+-51                  NPER
+0.5 0.05             PER
+1                    NBETA
+0                    BETA
+1                    NBODY
+wec.gdf
+0.0 0.0 0 0
+0 0 1 0 0 0          IMODE
+
+ First    10 lines of input file wec.gdf             
+ WAMIT GDF file exported from Gmsh
+    1.000000     9.806650      ULEN GRAV
+           1            1      ISX  ISY
+         132      NEQN
+ 7.725425e-01  0.000000e+00 -7.277641e+00
+ 7.725425e-01  0.000000e+00 -7.277641e+00
+ 0.000000e+00  0.000000e+00 -7.400000e+00
+ 7.646791e-01  1.099443e-01 -7.277641e+00
+ 7.646791e-01  1.099443e-01 -7.277641e+00
+ 7.646791e-01  1.099443e-01 -7.277641e+00
+
+
+ Number of processors used :   8
+
+ Estimated RAM used :  1.1E-03 Gigabytes
+
+  POTEN module run completed
+
+POTEN run completed:  17-May-2026 14:24:25
+
+FORCE run started:  17-May-2026 14:24:25
+
+ Input file wec.frc             
+WEC Force Configuration
+1 1 1 0 0 0 0 0 0    OutputFile
+0                    VCG1
+1 0 0
+0 1 0
+0 0 1
+0                    NBETAH
+0                    NFIELD
+
+ Nondimensional inertia matrix for body N =   1
+
+  127.700      0.00000      0.00000      0.00000      0.00000      0.00000    
+  0.00000      127.700      0.00000      0.00000      0.00000      0.00000    
+  0.00000      0.00000      127.700      0.00000      0.00000      0.00000    
+  0.00000      0.00000      0.00000      127.700      0.00000      0.00000    
+  0.00000      0.00000      0.00000      0.00000      127.700      0.00000    
+  0.00000      0.00000      0.00000      0.00000      0.00000      127.700    
+
+FORCE run completed:  17-May-2026 14:24:26
+
+  WAMIT run completed

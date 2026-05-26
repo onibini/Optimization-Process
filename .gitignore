@@ -1,0 +1,14 @@
+*.wam
+*.log
+*.dat
+*.1
+*.2
+*.3
+*.4
+wec.cfg
+*.frc
+*.gdf
+*.hst
+*.out
+*.p2f
+*.pot
