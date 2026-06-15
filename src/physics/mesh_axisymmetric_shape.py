@@ -1031,7 +1031,7 @@ def process_in_gmsh(nodes, quads, triangles, output_path=None, display=True):
                 symmetry_y=1
             )
 
-        print(f"    Export functionality placeholder for {output_path}")
+        # print(f"    Export functionality placeholder for {output_path}")
 
     # 4. 시각화 및 종료 (내보내기 로직은 사용자 정의에 따라 추가)
     if display:
@@ -1150,4 +1150,4 @@ def _write_gdf(
                     f.write(f"{c3[0]:13.6e} {c3[1]:13.6e} {c3[2]:13.6e}\n")
                     f.write(f"{c4[0]:13.6e} {c4[1]:13.6e} {c4[2]:13.6e}\n")
 
-    print(f"    Successfully exported GDF file: {output_path}")
+    # print(f"    Successfully exported GDF file: {output_path}")

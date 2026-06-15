@@ -105,6 +105,7 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
 
             eval_x = np.round(arx[k], 1)
             eval_x = np.clip(eval_x, lower_bounds, upper_bounds)
+            arx[k] = eval_x
 
             score, p_list = get_eval_score(eval_x, gen + 1)
             fitness[k] = score
