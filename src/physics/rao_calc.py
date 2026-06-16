@@ -1,9 +1,19 @@
 import os
 import numpy as np
 
+class WamitOutputError(RuntimeError):
+    """Raised when WAMIT finishes without the output needed for RAO calculation."""
+
+
+def _require_output_file(filepath):
+    if not os.path.exists(filepath):
+        raise WamitOutputError(f"Required WAMIT output file was not found: {filepath}")
+
+
 def get_volumes_from_out(workspace_dir, num_wecs):
     """ .out 파일에서 첫 번째 부피 라인의 마지막 값(VOLZ)을 찾아 모든 기기에 동일하게 적용 """
     out_file = os.path.join(workspace_dir, 'wec.out')
+    _require_output_file(out_file)
     volume_val = None
     
     with open(out_file, 'r', encoding='utf-8') as f:
@@ -13,13 +23,17 @@ def get_volumes_from_out(workspace_dir, num_wecs):
                 if parts: 
                     volume_val = float(parts[-1]) 
                     break 
-        
+
+    if volume_val is None:
+        raise WamitOutputError(f"Could not find VOLZ volume data in WAMIT output: {out_file}")
+
     return [volume_val] * num_wecs
 
 def get_c_mat_from_hst(workspace_dir, num_wecs, heave_dofs, rho, g):
     """ WAMIT .hst 파일에서 첫 번째 대각(Heave) 강성 값을 찾아 모든 기기에 동일하게 적용 """
     C_mat = np.zeros((num_wecs, num_wecs)) 
     file_hst = os.path.join(workspace_dir, 'wec.hst')
+    _require_output_file(file_hst)
     c33_val = None
     
     with open(file_hst, 'r') as f:
@@ -33,6 +47,9 @@ def get_c_mat_from_hst(workspace_dir, num_wecs, heave_dofs, rho, g):
                 if i == j and i in heave_dofs:
                     c33_val = float(cols[2]) * (rho * g)
                     break 
+
+    if c33_val is None:
+        raise WamitOutputError(f"Could not find heave hydrostatic stiffness data in WAMIT output: {file_hst}")
 
     C_mat = np.eye(num_wecs) * c33_val
         
@@ -56,6 +73,8 @@ def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665):
     C_mat = get_c_mat_from_hst(workspace_dir, num_wecs, heave_dofs, rho, g)
 
     file_1, file_2 = os.path.join(workspace_dir, 'wec.1'), os.path.join(workspace_dir, 'wec.2')
+    _require_output_file(file_1)
+    _require_output_file(file_2)
     hydro_dict, force_dict = {}, {}
 
     # ==========================================================
@@ -94,6 +113,14 @@ def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665):
                 force_dict[omega][heave_dofs[i]] = complex(float(cols[5]), float(cols[6])) * (rho * g)
 
     omega_list = sorted(list(hydro_dict.keys()))
+    if not omega_list:
+        raise WamitOutputError(f"Could not find heave added-mass/damping data in WAMIT output: {file_1}")
+
+    missing_force_omegas = [w for w in omega_list if w not in force_dict]
+    if missing_force_omegas:
+        raise WamitOutputError(
+            f"Could not find excitation force data for {len(missing_force_omegas)} frequencies in WAMIT output: {file_2}"
+        )
 
     # ==========================================================
     # [Step 1] 1차 해석: Base RAO 

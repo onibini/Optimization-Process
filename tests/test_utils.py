@@ -10,6 +10,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.utils.mapper import decode_symmetric_positions, canonicalize_vector_inplace
 from src.utils.geometry import check_min_distance
 from src.utils.data_handler import load_env_data
+from src.algorithms.common import CachedEvaluator, make_cache_key, quantize_vector, random_grid_population
+
+
+class DummyLogger:
+    def __init__(self):
+        self.trials = []
+
+    def write_trial(self, vector, score, individual_powers):
+        self.trials.append((vector.copy(), score, list(individual_powers)))
 
 class TestMapper(unittest.TestCase):
     def test_decode_symmetric_positions_3_wecs(self):
@@ -85,6 +94,81 @@ class TestDataHandler(unittest.TestCase):
     def test_load_env_data_invalid_id(self):
         with self.assertRaises(ValueError):
             load_env_data(site_id=999, filepath=self.temp_csv)
+
+
+class TestGridQuantization(unittest.TestCase):
+    def setUp(self):
+        self.config = {
+            'bounds': [[0.5, 3.0], [2.5, 4.0]],
+            'step_size': 0.25,
+        }
+
+    def test_quantize_vector_uses_config_step_size(self):
+        vector = np.array([0.62, 3.88])
+        quantized = quantize_vector(vector, self.config)
+        expected = np.array([0.5, 4.0])
+        np.testing.assert_array_almost_equal(quantized, expected)
+
+    def test_cache_key_uses_grid_indices(self):
+        v1 = quantize_vector(np.array([0.62, 3.88]), self.config)
+        v2 = quantize_vector(np.array([0.51, 3.99]), self.config)
+        self.assertEqual(make_cache_key(v1, self.config), make_cache_key(v2, self.config))
+
+    def test_random_grid_population_is_on_step_grid(self):
+        np.random.seed(1)
+        population = random_grid_population(20, self.config)
+        lower_bounds = np.array(self.config['bounds'][0])
+        step_indices = (population - lower_bounds) / self.config['step_size']
+        np.testing.assert_array_almost_equal(step_indices, np.round(step_indices))
+
+
+class TestCachedEvaluator(unittest.TestCase):
+    def test_cache_hit_skips_duplicate_physics_evaluation(self):
+        config = {
+            'bounds': [[0.5, 3.0], [2.5, 4.0]],
+            'step_size': 0.25,
+            'opt_mode': 1,
+            'num_wecs': 1,
+        }
+        logger = DummyLogger()
+        calls = []
+
+        def eval_func(vector, _config):
+            calls.append(vector.copy())
+            return float(np.sum(vector)), [float(vector[0])]
+
+        evaluator = CachedEvaluator(config, eval_func, logger)
+        first = evaluator.evaluate(np.array([0.62, 3.88]))
+        second = evaluator.evaluate(np.array([0.51, 3.99]))
+
+        self.assertEqual(first, second)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(evaluator.total_evals, 1)
+        self.assertEqual(evaluator.cache_hits, 1)
+        self.assertEqual(len(logger.trials), 1)
+
+    def test_canonicalized_5_wec_layout_hits_same_cache_entry(self):
+        config = {
+            'bounds': [[3.0, 3.0, 0.0, 3.0, 0.0], [25.0, 25.0, 30.0, 25.0, 30.0]],
+            'step_size': 0.1,
+            'opt_mode': 2,
+            'num_wecs': 5,
+        }
+        logger = DummyLogger()
+        calls = []
+
+        def eval_func(vector, _config):
+            calls.append(vector.copy())
+            return 123.0, [1.0] * 5
+
+        evaluator = CachedEvaluator(config, eval_func, logger)
+        evaluator.evaluate(np.array([10.0, 25.0, 30.0, 15.0, 20.0]))
+        evaluator.evaluate(np.array([10.0, 15.0, 20.0, 25.0, 30.0]))
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(evaluator.total_evals, 1)
+        self.assertEqual(evaluator.cache_hits, 1)
+        np.testing.assert_array_almost_equal(calls[0], np.array([10.0, 15.0, 20.0, 25.0, 30.0]))
 
 if __name__ == '__main__':
     unittest.main()

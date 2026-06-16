@@ -17,8 +17,6 @@ surface mesh를 생성한다.
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-import gmsh
 
 # ============================================================================
 # Generate Mesh of Axisymmetric Geometry
@@ -946,6 +944,8 @@ def visualize_profile(profile_points, title="Axisymmetric Profile (r vs z)",
     """
     (r, z) 프로파일 포인트를 시각화하는 헬퍼 함수
     """
+    import matplotlib.pyplot as plt
+
     r_coords = [p[0] for p in profile_points]
     z_coords = [p[1] for p in profile_points]
     
@@ -978,68 +978,69 @@ def process_in_gmsh(nodes, quads, triangles, output_path=None, display=True):
     """
     Raw Mesh Data (Nodes, Quads, Triangles)를 받아서 Gmsh로 시각화하거나 내보내는 함수
     """
+    import gmsh
+
     gmsh.initialize()
-    model_name = "Discrete_Mesh_Fixed_Pole"
-    gmsh.model.add(model_name)
-    gmsh.option.setNumber("General.Terminal", 0)
+    try:
+        model_name = "Discrete_Mesh_Fixed_Pole"
+        gmsh.model.add(model_name)
+        gmsh.option.setNumber("General.Terminal", 0)
 
-    # 1. Discrete Entity 생성
-    s_tag = 1
-    gmsh.model.addDiscreteEntity(2, s_tag)
+        # 1. Discrete Entity 생성
+        s_tag = 1
+        gmsh.model.addDiscreteEntity(2, s_tag)
 
-    # 2. 노드 입력
-    num_nodes = len(nodes) // 3
-    node_tags = list(range(1, num_nodes + 1))
-    gmsh.model.mesh.addNodes(2, s_tag, node_tags, nodes)
-    
-    # 3. 요소 입력
-    current_element_tag = 1
-    
-    # 3-1. 사각형 요소 (Type 3: 4-node quadrangle)
-    if quads:
-        num_quads = len(quads) // 4
-        quad_tags = list(range(current_element_tag, current_element_tag + num_quads))
-        gmsh.model.mesh.addElements(2, s_tag, [3], [quad_tags], [quads])
-        current_element_tag += num_quads
-    
-    # 3-2. 삼각형 요소 (Type 2: 3-node triangle)
-    if triangles:
-        num_triangles = len(triangles) // 3
-        triangle_tags = list(range(current_element_tag, current_element_tag + num_triangles))
-        gmsh.model.mesh.addElements(2, s_tag, [2], [triangle_tags], [triangles])
+        # 2. 노드 입력
+        num_nodes = len(nodes) // 3
+        node_tags = list(range(1, num_nodes + 1))
+        gmsh.model.mesh.addNodes(2, s_tag, node_tags, nodes)
 
-    # 노드 정보 가져오기
-    node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
-    
-    # 요소 정보 가져오기 (Connectivity)
-    panel_types, panel_tags, panel_nodes = gmsh.model.mesh.getElements(dim=2)
+        # 3. 요소 입력
+        current_element_tag = 1
 
-    # 4. 내보내기 (옵션)
-    if output_path:
-        if output_path.lower().endswith('.msh'):
-            gmsh.write(output_path)
-        elif output_path.lower().endswith('.gdf'):
-            _write_gdf(
-                output_path,
-                node_tags,
-                node_coords,
-                panel_types,
-                panel_tags,
-                panel_nodes,
-                gravity=9.80665,
-                symmetry_x=1,
-                symmetry_y=1
-            )
+        # 3-1. 사각형 요소 (Type 3: 4-node quadrangle)
+        if quads:
+            num_quads = len(quads) // 4
+            quad_tags = list(range(current_element_tag, current_element_tag + num_quads))
+            gmsh.model.mesh.addElements(2, s_tag, [3], [quad_tags], [quads])
+            current_element_tag += num_quads
 
-        # print(f"    Export functionality placeholder for {output_path}")
+        # 3-2. 삼각형 요소 (Type 2: 3-node triangle)
+        if triangles:
+            num_triangles = len(triangles) // 3
+            triangle_tags = list(range(current_element_tag, current_element_tag + num_triangles))
+            gmsh.model.mesh.addElements(2, s_tag, [2], [triangle_tags], [triangles])
 
-    # 4. 시각화 및 종료 (내보내기 로직은 사용자 정의에 따라 추가)
-    if display:
-        gmsh.option.setNumber('Mesh.SurfaceEdges', 1)
-        gmsh.option.setNumber('Mesh.Normals', 20)
-        gmsh.fltk.run()
-    
-    gmsh.finalize()
+        # 노드 정보 가져오기
+        node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
+
+        # 요소 정보 가져오기 (Connectivity)
+        panel_types, panel_tags, panel_nodes = gmsh.model.mesh.getElements(dim=2)
+
+        # 4. 내보내기 (옵션)
+        if output_path:
+            if output_path.lower().endswith('.msh'):
+                gmsh.write(output_path)
+            elif output_path.lower().endswith('.gdf'):
+                _write_gdf(
+                    output_path,
+                    node_tags,
+                    node_coords,
+                    panel_types,
+                    panel_tags,
+                    panel_nodes,
+                    gravity=9.80665,
+                    symmetry_x=1,
+                    symmetry_y=1
+                )
+
+        # 5. 시각화 및 종료
+        if display:
+            gmsh.option.setNumber('Mesh.SurfaceEdges', 1)
+            gmsh.option.setNumber('Mesh.Normals', 20)
+            gmsh.fltk.run()
+    finally:
+        gmsh.finalize()
 
 
 def _write_gdf(

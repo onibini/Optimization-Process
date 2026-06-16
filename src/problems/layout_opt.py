@@ -6,6 +6,7 @@ from src.physics import write_wamit_inputs, run_wamit, calculate_rao_matrix, cal
 def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_data, wave_spec:int):
     lower_bounds = []
     upper_bounds = []
+    step_size = float(constraints_dict['StepSize'])
 
     # 중심 WEC - 항상 존재하며 Y=0으로 고정되므로 X 바운드만 추가
     lower_bounds.append(float(constraints_dict['WEC1_XMin']))
@@ -24,6 +25,7 @@ def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_d
     return {
         'dimensions': len(lower_bounds), # 1기: 1차원, 3기: 3차원, 5기: 5차원
         'bounds': [lower_bounds, upper_bounds],
+        'step_size': step_size,
         'num_wecs': num_wecs,
         'fixed_radius': float(params_dict['FixedRadius']),
         'fixed_draft': float(params_dict['FixedDraft']),
@@ -53,12 +55,10 @@ def evaluate_layout(vector, config):
     if dist_violation > 0:
         return -1e6 * dist_violation, [0.0] * config['num_wecs']  # 큰 패널티 반환
     
-    config['positions'] = positions
     workspace_dir = 'workspace'
-    write_wamit_inputs(vector, config, workspace_dir)
+    write_wamit_inputs(vector, config, workspace_dir, positions=positions)
     run_wamit(workspace_dir)
     rao_results = calculate_rao_matrix(workspace_dir, config['num_wecs'])
     total_power, individual_powers = calculate_power(rao_results, config)
 
     return total_power, individual_powers
-    

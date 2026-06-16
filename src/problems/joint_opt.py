@@ -23,6 +23,7 @@ def get_joint_config(constraints_dict, params_dict, num_wecs, env_data, wamit_da
     return {
         'dimensions': len(lower_bounds),
         'bounds': [lower_bounds, upper_bounds],
+        'step_size': float(constraints_dict['StepSize']),
         'shape_dim': 2,
         'num_wecs': num_wecs,
         'min_spacing': float(params_dict['MinSpacing']),
@@ -56,10 +57,8 @@ def evaluate_joint(vector, config):
     if dist_violation > 0:
         return -1e6 * dist_violation, [0.0] * config['num_wecs']  # 큰 패널티 반환
     
-    config['positions'] = positions
-    
     workspace_dir = 'workspace'
-    write_wamit_inputs(vector, config, workspace_dir)
+    write_wamit_inputs(vector, config, workspace_dir, positions=positions)
     run_wamit(workspace_dir)
     rao_values = calculate_rao_matrix(workspace_dir, config['num_wecs'])
     total_power, individual_powers = calculate_power(rao_values, config)

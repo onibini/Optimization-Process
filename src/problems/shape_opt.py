@@ -10,6 +10,7 @@ def get_shape_config(constraints_dict:dict, env_data:dict, wamit_data:dict, wave
     r_max = float(constraints_dict['RadiusMax'])
     d_min = float(constraints_dict['DraftMin'])
     d_max = float(constraints_dict['DraftMax'])
+    step_size = float(constraints_dict['StepSize'])
 
     lower_bounds = [r_min, d_min]
     upper_bounds = [r_max, d_max]
@@ -17,6 +18,7 @@ def get_shape_config(constraints_dict:dict, env_data:dict, wamit_data:dict, wave
     return {
         'dimensions': 2, 
         'bounds': [lower_bounds, upper_bounds], 
+        'step_size': step_size,
         'num_wecs': 1,
         'opt_mode': 1,
         'wave_spec': wave_spec,

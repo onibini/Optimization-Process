@@ -22,6 +22,7 @@ This project is a scientific optimization framework written in Python. It optimi
 │
 ├── src/
 │   ├── algorithms/            # Optimization algorithms (Metaheuristics)
+│   │   ├── common.py          # Shared cached evaluator and CSV logging utilities
 │   │   ├── de.py              # Differential Evolution (DE/rand/1/bin)
 │   │   ├── pso.py             # Particle Swarm Optimization (PSO)
 │   │   ├── ga.py              # Genetic Algorithm (GA)
@@ -100,5 +101,6 @@ The system operates in a sequential pipeline described by the diagram below:
 
 ## 4. LLM Developer Notes
 
-- **Cache Strategy**: Evaluation is cached on a discretized key (rounded to 1 decimal place, scaled by 10) in `get_eval_score` within each algorithm. Always ensure trial vectors are canonicalized before caching.
+- **Cache Strategy**: Evaluation is cached by `CachedEvaluator` in `src/algorithms/common.py` on a `StepSize`-based grid-index key. Trial vectors are quantized to the configured grid and canonicalized before cache lookup.
+- **Mesh Reuse**: WAMIT GDF mesh generation is skipped when the existing `wec.gdf` metadata matches the requested radius, draft, and mesh density.
 - **WAMIT Interface**: Communication with WAMIT is file-based via the `./workspace` directory. Input files (`.pot`, `.frc`, `.gdf`, `fnames.wam`, `wec.cfg`, `config.wam`) are written before execution, and results (`wec.out`, `wec.1`, etc.) are parsed post-execution.

@@ -1,5 +1,12 @@
 import sys
-from src.problems import *
+from src.problems import (
+    evaluate_joint,
+    evaluate_layout,
+    evaluate_shape,
+    get_joint_config,
+    get_layout_config,
+    get_shape_config,
+)
 from src.algorithms import run_de, run_pso, run_ga, run_cma_es
 from src.utils.data_handler import load_env_data
 
@@ -32,7 +39,7 @@ def parse_wec_cfg(filepath):
     return config_dict
 
 def main():
-    print("=== WEC Optimization Startd ===")
+    print("=== WEC Optimization Started ===")
 
     # 1. Read config file
     cfg_path = "config.cfg"
@@ -113,7 +120,7 @@ def main():
 
     elif algo_type == 3:
         print("Algorithm: [Genetic Algorithm]")
-        mutation_rate = float(algo_settings['MutationRate'])
+        mutation_rate = float(algo_settings.get('MutationRate', 0.1))
         best_x, best_f = run_ga(
             config=problem_config,
             eval_func=eval_func,
@@ -124,11 +131,13 @@ def main():
 
     elif algo_type == 4:
         print("Algorithm: [CMA-ES]")
+        sigma_init = float(algo_settings.get('SigmaInit', 0.3))
         best_x, best_f = run_cma_es(
             config=problem_config,
             eval_func=eval_func,
             pop_size=pop_size,
-            max_iter=max_iter
+            max_iter=max_iter,
+            sigma_init=sigma_init
         )
     else:
         print("Error: Invalid Algorithm type in config file.")

@@ -1,9 +1,9 @@
+import json
 import os
 import subprocess
-import numpy as np
 from src.physics.mesh_axisymmetric_shape import generate_cylinder_hemisphere_mesh
 
-def write_wamit_inputs(vector, config, workspace_dir):
+def write_wamit_inputs(vector, config, workspace_dir, positions=None):
     """
     OptMode에 따라 WAMIT 입력 파일(fnames.wam, .pot, .frc, .gdf)을 생성합니다.
     """
@@ -18,25 +18,23 @@ def write_wamit_inputs(vector, config, workspace_dir):
     # 1. 최적화 모드별 형상 및 위치 확정
     if mode == 1: # Shape Only
         radius, draft = vector[0], vector[1]
-        positions = [(0.0, 0.0)]
+        body_positions = [(0.0, 0.0)]
     elif mode == 2: # Layout Only
         radius, draft = config['fixed_radius'], config['fixed_draft']
-        positions = config['positions']
+        body_positions = positions
     else: # Shape + Layout
         radius, draft = vector[0], vector[1]
-        positions = config['positions']
+        body_positions = positions
+
+    if body_positions is None:
+        raise ValueError("WEC positions must be provided for layout or joint optimization modes.")
 
     gdf_filename = 'wec.gdf'
     gdf_path = os.path.join(workspace_dir, gdf_filename)
+    max_elements = 300
 
     # 2. GDF 파일 생성
-    generate_cylinder_hemisphere_mesh(
-        radius=radius,
-        draft_cylinder=draft,
-        max_elements=300,
-        output_path=gdf_path,
-        display_mesh=False
-    )
+    write_gdf_if_needed(gdf_path, radius, draft, max_elements)
 
     # 3. fnames.wam 작성
     with open(os.path.join(workspace_dir, 'fnames.wam'), 'w') as f:
@@ -45,16 +43,43 @@ def write_wamit_inputs(vector, config, workspace_dir):
         f.write("wec.frc\n")
     
     # 4. POT 파일 작성
-    write_pot_file(workspace_dir, positions, config)
+    write_pot_file(workspace_dir, body_positions, config)
 
     # 5. FRC 파일 작성
-    write_frc_file(workspace_dir, len(positions))
+    write_frc_file(workspace_dir, len(body_positions))
 
     # 6. CFG 파일 작성
     write_config_cfg(workspace_dir, mode)
 
     # 7. WAMIT 설정 파일 작성
     write_config_wam(workspace_dir, NCPU, RAMGBMAX)
+
+def write_gdf_if_needed(gdf_path, radius, draft, max_elements):
+    meta_path = f"{gdf_path}.meta.json"
+    mesh_meta = {
+        'radius': round(float(radius), 10),
+        'draft': round(float(draft), 10),
+        'max_elements': int(max_elements),
+    }
+
+    if os.path.exists(gdf_path) and os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                if json.load(f) == mesh_meta:
+                    return
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    generate_cylinder_hemisphere_mesh(
+        radius=radius,
+        draft_cylinder=draft,
+        max_elements=max_elements,
+        output_path=gdf_path,
+        display_mesh=False
+    )
+
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(mesh_meta, f, indent=2)
 
 def write_pot_file(workspace_dir, positions, config):
     depth = config['depth']

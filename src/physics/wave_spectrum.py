@@ -50,6 +50,8 @@ def get_jonswap_spectrum(omega, Hs, Tp, gamma, spec_type):
         term3 = gamma ** r
         
         S = term1 * term2 * term3
+    else:
+        raise ValueError(f"Invalid wave spectrum type: {spec_type}. Use 1 (ITTC) or 2 (Goda).")
 
     S[omega == 0] = 0.0
     return S

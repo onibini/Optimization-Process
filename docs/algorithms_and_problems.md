@@ -26,18 +26,20 @@ For valid configurations, the evaluation runs a boundary element method solver (
 ### Spacing Constraint
 To prevent WEC cylinders from colliding or overlapping, they must maintain a minimum clear spacing:
 - Let $R$ be the WEC radius.
-- Let $d_{\text{min\_spacing}}$ be the minimum spacing between WEC surfaces.
+- Let $s_{\text{min\_spacing}}$ be the minimum center-to-center distance coefficient.
 - For any WEC pair $i$ and $j$ located at $(x_i, y_i)$ and $(x_j, y_j)$, the Euclidean distance $D_{ij}$ must satisfy:
 
-$$D_{ij} \ge 2R + d_{\text{min\_spacing}}$$
+$$D_{ij} \ge R \times s_{\text{min\_spacing}}$$
 
 ### Boundary Constraints
-Lower and upper bounds for each parameter are defined in `config.cfg` and enforced by clamping variables during trial vector generation:
+Lower and upper bounds for each parameter are defined in `config.cfg`. Candidate vectors are repaired to the nearest configured `StepSize` grid point and kept inside the valid search range:
 
-$$\vec{v} \leftarrow \text{clip}(\vec{v}, \vec{v}_{\text{lower}}, \vec{v}_{\text{upper}})$$
+$$\vec{k} = \text{round}\left((\vec{v} - \vec{v}_{\text{lower}}) / \Delta\right)$$
+
+$$\vec{v}_{\text{grid}} = \vec{v}_{\text{lower}} + \vec{k}\Delta$$
 
 ### Penalty Evaluation
-If a layout violates the spacing constraint ($D_{ij} < 2R + d_{\text{min\_spacing}}$), a penalty is returned **immediately without running WAMIT**:
+If a layout violates the spacing constraint ($D_{ij} < R \times s_{\text{min\_spacing}}$), a penalty is returned **immediately without running WAMIT**:
 
 $$\text{Fitness} = -10^6 \times \text{violation\_distance}$$
 
@@ -47,7 +49,7 @@ This is computationally efficient because it prevents expensive mesh generation 
 
 ## 3. Optimization Algorithms
 
-The system implements four distinct optimization engines. All engines utilize discretization (rounding to 1 decimal place) and a canonicalization step in `get_eval_score` to query the `memory_cache`.
+The system implements four distinct optimization engines. All engines use the shared `CachedEvaluator` to quantize vectors to the configured `StepSize`, canonicalize symmetric layouts, and query a grid-indexed in-memory cache before running the expensive physics evaluation.
 
 ### 1. Differential Evolution (DE)
 - **Strategy**: `DE/rand/1/bin`
@@ -59,11 +61,11 @@ The system implements four distinct optimization engines. All engines utilize di
 - **Parameters**: `w` (inertia weight), `c1` (cognitive learning rate), `c2` (social learning rate).
 
 ### 3. Genetic Algorithm (GA)
-- **Operators**: Tournament selection (size 4), uniform crossover, Gaussian mutation.
+- **Operators**: Tournament selection (size 4), uniform crossover, grid-step mutation.
 - **Elitism**: The best individual from the previous generation is always preserved at index 0 of the new population.
 - **Parameters**: `MutationRate`.
 
 ### 4. CMA-ES
 - **Method**: Adapts the covariance matrix of a multivariate normal distribution to guide the search towards promising areas.
-- **Grid Integration**: Offspring are sampled from the continuous distribution, then rounded to 1 decimal place (discrete grid) and canonicalized before evaluation.
-- **Parameters**: `sigma_init` (initial search step size).
+- **Grid Integration**: Offspring are sampled from the continuous distribution, then quantized to the configured `StepSize` grid and canonicalized before evaluation. The search step size is not allowed to shrink below one grid step.
+- **Parameters**: `SigmaInit` (initial search step ratio).
