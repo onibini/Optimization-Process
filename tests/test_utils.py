@@ -11,6 +11,7 @@ from src.utils.mapper import decode_symmetric_positions, canonicalize_vector_inp
 from src.utils.geometry import check_min_distance
 from src.utils.data_handler import load_env_data
 from src.algorithms.common import CachedEvaluator, make_cache_key, quantize_vector, random_grid_population
+from src.algorithms.cma_es import _denormalize_vector, _normalize_vector
 
 
 class DummyLogger:
@@ -120,6 +121,22 @@ class TestGridQuantization(unittest.TestCase):
         lower_bounds = np.array(self.config['bounds'][0])
         step_indices = (population - lower_bounds) / self.config['step_size']
         np.testing.assert_array_almost_equal(step_indices, np.round(step_indices))
+
+
+class TestCMAESScaling(unittest.TestCase):
+    def test_normalized_mapping_handles_different_variable_ranges(self):
+        lower_bounds = np.array([0.5, 3.0, 1000.0])
+        upper_bounds = np.array([2.5, 25.0, 101000.0])
+        bounds_range = upper_bounds - lower_bounds
+        normalized = np.array([0.0, 0.5, 1.0])
+
+        physical = _denormalize_vector(normalized, lower_bounds, bounds_range)
+        expected_physical = np.array([0.5, 14.0, 101000.0])
+        np.testing.assert_array_almost_equal(physical, expected_physical)
+        np.testing.assert_array_almost_equal(
+            _normalize_vector(physical, lower_bounds, bounds_range),
+            normalized,
+        )
 
 
 class TestCachedEvaluator(unittest.TestCase):

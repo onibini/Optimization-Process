@@ -2,16 +2,30 @@ import numpy as np
 import time
 from src.algorithms.common import CachedEvaluator, OptimizationLogger, get_step_size, quantize_vector
 
+
+def _normalize_vector(vector, lower_bounds, bounds_range):
+    return (vector - lower_bounds) / bounds_range
+
+
+def _denormalize_vector(vector, lower_bounds, bounds_range):
+    return lower_bounds + vector * bounds_range
+
+
 def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
     """
     CMA-ES (Covariance Matrix Adaptation Evolution Strategy) 메인 엔진
     - 0.1 이산 격자(Discrete Grid) 및 메모이제이션 통합 버전
+    - 설계변수별 범위 차이에 강건하도록 [0, 1] 정규화 공간에서 분포를 적응
     
     :param sigma_init: 초기 탐색 보폭 (전체 탐색 범위 대비 비율, 기본 30%)
     """
 
     dimensions = config['dimensions']
     lower_bounds, upper_bounds = np.array(config['bounds'][0]), np.array(config['bounds'][1])
+    bounds_range = upper_bounds - lower_bounds
+    if np.any(bounds_range <= 0):
+        raise ValueError("CMA-ES requires every upper bound to be greater than its lower bound.")
+
     logger = OptimizationLogger(config, suffix="cmaes")
     evaluator = CachedEvaluator(config, eval_func, logger)
     
@@ -37,8 +51,9 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
     damps = 1 + 2 * max(0, np.sqrt((mueff - 1) / (N + 1)) - 1) + cs
 
     # 진화 상태 변수 초기화
-    m = lower_bounds + np.random.rand(N) * (upper_bounds - lower_bounds) # 초기 평균
-    sigma = sigma_init * np.max(upper_bounds - lower_bounds) # 초기 탐색 보폭
+    m = np.random.rand(N) # 초기 평균 ([0, 1] 정규화 공간)
+    sigma = float(sigma_init) # 초기 탐색 보폭 (정규화 공간 비율)
+    min_sigma = np.min(step_size / bounds_range)
 
     pc = np.zeros(N) # 공분산 진화 경로
     ps = np.zeros(N) # 보폭 진화 경로
@@ -57,20 +72,21 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
         for gen in range(max_iter):
             gen_start = time.time()
 
-            arx = np.zeros((lambda_, N))
+            arx = np.zeros((lambda_, N)) # 정규화 공간의 평가 완료 후보
             arz = np.zeros((lambda_, N))
             fitness = np.zeros(lambda_)
 
             # 1. 자식 개체 생성 및 평가
             for k in range(lambda_):
                 arz[k] = np.random.randn(N)
-                arx[k] = m + sigma * (B @ (D * arz[k]))
+                candidate_z = m + sigma * (B @ (D * arz[k]))
+                candidate_z = np.clip(candidate_z, 0.0, 1.0)
 
-                eval_x = quantize_vector(arx[k], config)
-                arx[k] = eval_x
+                eval_x = quantize_vector(_denormalize_vector(candidate_z, lower_bounds, bounds_range), config)
 
                 score, p_list = evaluator.evaluate(eval_x)
                 fitness[k] = score
+                arx[k] = _normalize_vector(eval_x, lower_bounds, bounds_range)
 
                 if score > best_f:
                     best_f = score
@@ -99,7 +115,7 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
 
             # 6. 보폭 sigma 업데이트
             sigma = sigma * np.exp((cs / damps) * (np.linalg.norm(ps) / echi - 1))
-            sigma = max(sigma, step_size)
+            sigma = max(sigma, min_sigma)
 
             # 7. 고유값 분해로 B, D, invsqrtC 갱신
             C = (C + C.T) / 2

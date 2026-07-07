@@ -67,5 +67,6 @@ The system implements four distinct optimization engines. All engines use the sh
 
 ### 4. CMA-ES
 - **Method**: Adapts the covariance matrix of a multivariate normal distribution to guide the search towards promising areas.
+- **Normalized Search Space**: The distribution mean, covariance matrix, and global step size are adapted in a dimensionless `[0, 1]` coordinate system. Each sampled normalized vector is converted back to the configured physical bounds before quantization and evaluation. This prevents variables with large numeric ranges from dominating the covariance adaptation.
 - **Grid Integration**: Offspring are sampled from the continuous distribution, then quantized to the configured `StepSize` grid and canonicalized before evaluation. The search step size is not allowed to shrink below one grid step.
 - **Parameters**: `SigmaInit` (initial search step ratio).
