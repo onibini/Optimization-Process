@@ -1,18 +1,19 @@
 import numpy as np
 
+
 def check_min_distance(positions, radius, min_spacing):
-    '''
+    """
     N x N 거리 행렬을 생성하여 WEC 간 최소 거리 위반량을 계산
     - positions: [(x1, y1), (x2, y2), ...] 형태의 WEC 좌표 리스트
     - radius: 각 WEC의 반지름
     - min_spacing: 최소 간격 계수
     - 반환값: 총 거리 위반량의 합
-    '''
+    """
 
     num_wecs = len(positions)
     if num_wecs <= 1:
         return 0.0
-    
+
     # 1. 리스트를 numpy 배열로 변환 (Shape: N x 2)
     pos_array = np.array(positions)
 

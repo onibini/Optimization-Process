@@ -13,14 +13,14 @@ This project is a scientific optimization framework written in Python. It optimi
 ## 2. Directory and File Map
 
 ```
-├── main.py                    # Entry point of the optimization process. Parses configs, initializes models, runs engine.
 ├── config.cfg                 # Optimization parameters, limits, constraints, and physical environment specifications.
-├── requirements.txt           # External Python library dependencies (numpy, scipy, matplotlib, gmsh).
+├── pyproject.toml             # Build metadata, dependencies, CLI entry point, and test configuration.
 │
-├── data/
-│   └── env_data.csv           # Significant wave heights (Hs), wave periods (Tp), water depths (Depth) by site.
-│
-├── src/
+├── src/wec_optimization/
+│   ├── cli.py                 # Parses configs, initializes models, and runs the optimization engine.
+│   ├── data/
+│   │   └── env_data.csv       # Significant wave heights (Hs), wave periods (Tp), water depths (Depth) by site.
+│   │
 │   ├── algorithms/            # Optimization algorithms (Metaheuristics)
 │   │   ├── common.py          # Shared cached evaluator and CSV logging utilities
 │   │   ├── de.py              # Differential Evolution (DE/rand/1/bin)
@@ -53,10 +53,10 @@ This project is a scientific optimization framework written in Python. It optimi
 The system operates in a sequential pipeline described by the diagram below:
 
 ```
-[User Execution (python main.py)]
+[User Execution (wec-optimize --config config.cfg)]
               │
               ▼
-    [Load config.cfg] ──► [Load data/env_data.csv (Site ID)]
+    [Load config.cfg] ──► [Load packaged data/env_data.csv (Site ID)]
               │
               ▼
    [Setup Optimization Mode]
@@ -101,6 +101,7 @@ The system operates in a sequential pipeline described by the diagram below:
 
 ## 4. LLM Developer Notes
 
-- **Cache Strategy**: Evaluation is cached by `CachedEvaluator` in `src/algorithms/common.py` on a `StepSize`-based grid-index key. Trial vectors are quantized to the configured grid and canonicalized before cache lookup.
+- **Cache Strategy**: Evaluation is cached by `CachedEvaluator` in `src/wec_optimization/algorithms/common.py` on a `StepSize`-based grid-index key. Trial vectors are quantized to the configured grid and canonicalized before cache lookup.
+- **Checkpoint Strategy**: At generation boundaries, each optimizer atomically saves its population and algorithm-specific state, evaluation cache, best solution, and NumPy random state. A settings fingerprint prevents incompatible runs from being resumed.
 - **Mesh Reuse**: WAMIT GDF mesh generation is skipped when the existing `wec.gdf` metadata matches the requested radius, draft, and mesh density.
-- **WAMIT Interface**: Communication with WAMIT is file-based via the `./workspace` directory. Input files (`.pot`, `.frc`, `.gdf`, `fnames.wam`, `wec.cfg`, `config.wam`) are written before execution, and results (`wec.out`, `wec.1`, etc.) are parsed post-execution.
+- **WAMIT Interface**: Parallel candidates use independent `workspace/eval_*` directories. Input files (`.pot`, `.frc`, `.gdf`, `fnames.wam`, `wec.cfg`, `config.wam`) are written before execution and results are parsed before successful workspaces are optionally removed. Failed workspaces remain available for diagnosis.

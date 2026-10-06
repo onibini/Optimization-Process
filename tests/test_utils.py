@@ -1,17 +1,22 @@
-import unittest
-import os
 import tempfile
+import unittest
+from pathlib import Path
+
 import numpy as np
 
-# Add project root to sys.path if not present
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.utils.mapper import decode_symmetric_positions, canonicalize_vector_inplace
-from src.utils.geometry import check_min_distance
-from src.utils.data_handler import load_env_data
-from src.algorithms.common import CachedEvaluator, make_cache_key, quantize_vector, random_grid_population
-from src.algorithms.cma_es import _denormalize_vector, _normalize_vector
+from wec_optimization.algorithms.cma_es import _denormalize_vector, _normalize_vector
+from wec_optimization.algorithms.common import (
+    CachedEvaluator,
+    make_cache_key,
+    quantize_vector,
+    random_grid_population,
+)
+from wec_optimization.utils.data_handler import load_env_data
+from wec_optimization.utils.geometry import check_min_distance
+from wec_optimization.utils.mapper import (
+    canonicalize_vector_inplace,
+    decode_symmetric_positions,
+)
 
 
 class DummyLogger:
@@ -20,6 +25,7 @@ class DummyLogger:
 
     def write_trial(self, vector, score, individual_powers):
         self.trials.append((vector.copy(), score, list(individual_powers)))
+
 
 class TestMapper(unittest.TestCase):
     def test_decode_symmetric_positions_3_wecs(self):
@@ -37,8 +43,10 @@ class TestMapper(unittest.TestCase):
         # s_x2, s_y2 should be sorted from [(30, 40), (20, 25)] -> (20, 25) comes first
         expected = [
             (10.0, 0.0),
-            (20.0, 25.0), (20.0, -25.0), # WEC 2 & symmetric partner
-            (30.0, 40.0), (30.0, -40.0)  # WEC 3 & symmetric partner
+            (20.0, 25.0),
+            (20.0, -25.0),  # WEC 2 & symmetric partner
+            (30.0, 40.0),
+            (30.0, -40.0),  # WEC 3 & symmetric partner
         ]
         self.assertEqual(positions, expected)
 
@@ -66,7 +74,7 @@ class TestGeometry(unittest.TestCase):
 
     def test_check_min_distance_with_violation(self):
         # WEC radius = 2.5, min_spacing = 4.0 -> min allowed distance = 10.0
-        positions = [(10.0, 0.0), (15.0, 0.0)] # distance = 5.0
+        positions = [(10.0, 0.0), (15.0, 0.0)]  # distance = 5.0
         violation = check_min_distance(positions, radius=2.5, min_spacing=4.0)
         # violation = 10.0 - 5.0 = 5.0
         self.assertAlmostEqual(violation, 5.0)
@@ -76,8 +84,8 @@ class TestDataHandler(unittest.TestCase):
     def setUp(self):
         # Create a temporary CSV file
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_csv = os.path.join(self.temp_dir.name, 'test_env_data.csv')
-        with open(self.temp_csv, 'w', encoding='utf-8') as f:
+        self.temp_csv = Path(self.temp_dir.name) / "test_env_data.csv"
+        with self.temp_csv.open("w", encoding="utf-8") as f:
             f.write("SiteID,SiteName,Hs,Tp,Gamma,Depth\n")
             f.write("1,TestSite,1.5,6.0,1.4,45.0\n")
 
@@ -86,11 +94,15 @@ class TestDataHandler(unittest.TestCase):
 
     def test_load_env_data_success(self):
         data = load_env_data(site_id=1, filepath=self.temp_csv)
-        self.assertEqual(data['SiteName'], 'TestSite')
-        self.assertEqual(data['Hs'], 1.5)
-        self.assertEqual(data['Tp'], 6.0)
-        self.assertEqual(data['Gamma'], 1.4)
-        self.assertEqual(data['Depth'], 45.0)
+        self.assertEqual(data["SiteName"], "TestSite")
+        self.assertEqual(data["Hs"], 1.5)
+        self.assertEqual(data["Tp"], 6.0)
+        self.assertEqual(data["Gamma"], 1.4)
+        self.assertEqual(data["Depth"], 45.0)
+
+    def test_load_packaged_env_data(self):
+        data = load_env_data(site_id=1)
+        self.assertEqual(data["SiteName"], "Buan")
 
     def test_load_env_data_invalid_id(self):
         with self.assertRaises(ValueError):
@@ -100,8 +112,8 @@ class TestDataHandler(unittest.TestCase):
 class TestGridQuantization(unittest.TestCase):
     def setUp(self):
         self.config = {
-            'bounds': [[0.5, 3.0], [2.5, 4.0]],
-            'step_size': 0.25,
+            "bounds": [[0.5, 3.0], [2.5, 4.0]],
+            "step_size": 0.25,
         }
 
     def test_quantize_vector_uses_config_step_size(self):
@@ -118,8 +130,8 @@ class TestGridQuantization(unittest.TestCase):
     def test_random_grid_population_is_on_step_grid(self):
         np.random.seed(1)
         population = random_grid_population(20, self.config)
-        lower_bounds = np.array(self.config['bounds'][0])
-        step_indices = (population - lower_bounds) / self.config['step_size']
+        lower_bounds = np.array(self.config["bounds"][0])
+        step_indices = (population - lower_bounds) / self.config["step_size"]
         np.testing.assert_array_almost_equal(step_indices, np.round(step_indices))
 
 
@@ -142,10 +154,10 @@ class TestCMAESScaling(unittest.TestCase):
 class TestCachedEvaluator(unittest.TestCase):
     def test_cache_hit_skips_duplicate_physics_evaluation(self):
         config = {
-            'bounds': [[0.5, 3.0], [2.5, 4.0]],
-            'step_size': 0.25,
-            'opt_mode': 1,
-            'num_wecs': 1,
+            "bounds": [[0.5, 3.0], [2.5, 4.0]],
+            "step_size": 0.25,
+            "opt_mode": 1,
+            "num_wecs": 1,
         }
         logger = DummyLogger()
         calls = []
@@ -166,10 +178,10 @@ class TestCachedEvaluator(unittest.TestCase):
 
     def test_canonicalized_5_wec_layout_hits_same_cache_entry(self):
         config = {
-            'bounds': [[3.0, 3.0, 0.0, 3.0, 0.0], [25.0, 25.0, 30.0, 25.0, 30.0]],
-            'step_size': 0.1,
-            'opt_mode': 2,
-            'num_wecs': 5,
+            "bounds": [[3.0, 3.0, 0.0, 3.0, 0.0], [25.0, 25.0, 30.0, 25.0, 30.0]],
+            "step_size": 0.1,
+            "opt_mode": 2,
+            "num_wecs": 5,
         }
         logger = DummyLogger()
         calls = []
@@ -186,6 +198,3 @@ class TestCachedEvaluator(unittest.TestCase):
         self.assertEqual(evaluator.total_evals, 1)
         self.assertEqual(evaluator.cache_hits, 1)
         np.testing.assert_array_almost_equal(calls[0], np.array([10.0, 15.0, 20.0, 25.0, 30.0]))
-
-if __name__ == '__main__':
-    unittest.main()

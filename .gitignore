@@ -1,14 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+
+# Generated simulation and optimization output
 *.wam
 *.log
 *.dat
-
-
-# Python/Environment temporary directories
-__pycache__/
-*.pyc
-
-# Local run/optimization directories
-workspace/*
+workspace/
 logs/
+results/
+checkpoints/
+
+# Editors and operating systems
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
