@@ -22,7 +22,7 @@ python -m unittest discover -s tests
 ```
 
 - Add or update tests in `tests/` for every behavior change. Tests must not require WAMIT or a display.
-- Keep Python 3.8 compatibility (`ruff.toml` sets `target-version = "py38"`).
+- Keep Python 3.10 compatibility (`ruff.toml` sets `target-version = "py310"`).
 - All design variables (radius, draft, x, y) must be positive; search ranges satisfy `0 < Min < Max`.
 - Record each change in [CHANGELOG.md](CHANGELOG.md) under `[Unreleased]` and add a report
   `docs/reports/YYYY-MM-DD_NN_<topic>.md` (see existing reports for the format).

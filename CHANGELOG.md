@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — 최소 Python 버전을 3.10으로 상향
+보고서: [docs/reports/2026-10-21_08_python-3-10.md](docs/reports/2026-10-21_08_python-3-10.md)
+
+#### Changed
+- 최소 지원 Python 3.8 → 3.10. `ruff.toml` target, CI 매트릭스(3.10, 3.12), 문서 표기 갱신. `zip(..., strict=True)` 명시, 3.8용 `from __future__ import annotations` 제거.
+
 ### 2026-10-21 — GitHub 공개 준비 보강
 보고서: [docs/reports/2026-10-21_07_github-readiness.md](docs/reports/2026-10-21_07_github-readiness.md)
 

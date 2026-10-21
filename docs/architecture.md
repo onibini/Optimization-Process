@@ -21,7 +21,7 @@ This project is a scientific optimization framework written in Python. It optimi
 ├── CHANGELOG.md               # Change history ([Unreleased] + released versions).
 ├── CLAUDE.md                  # Working rules for AI assistants (read first).
 ├── CONTRIBUTING.md            # Contribution guide (setup, checks, report/CHANGELOG rules).
-├── .github/workflows/python-tests.yml  # GitHub Actions: ruff lint/format + unittest (Python 3.8, 3.12).
+├── .github/workflows/python-tests.yml  # GitHub Actions: ruff lint/format + unittest (Python 3.10, 3.12).
 ├── .github/ISSUE_TEMPLATE/, pull_request_template.md  # Issue / PR templates.
 │
 ├── data/

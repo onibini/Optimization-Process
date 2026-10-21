@@ -43,7 +43,7 @@ def validate_design_bounds(names, lower_bounds, upper_bounds):
         raise ConfigValidationError("설계 변수 이름/하한/상한의 개수가 서로 다릅니다.")
 
     errors = []
-    for name, lo, hi in zip(names, lower_bounds, upper_bounds):
+    for name, lo, hi in zip(names, lower_bounds, upper_bounds, strict=True):
         lo_f, hi_f = _to_float(f"{name} (min)", lo), _to_float(f"{name} (max)", hi)
         if lo_f <= 0:
             errors.append(f"  - {name}: 하한 {lo_f}은(는) 양수(> 0)여야 합니다.")
@@ -68,7 +68,7 @@ def resolve_step_sizes(constraints_dict, names, lower_bounds, upper_bounds):
     """
     has_default = "StepSize" in constraints_dict
     steps = []
-    for name, lo, hi in zip(names, lower_bounds, upper_bounds):
+    for name, lo, hi in zip(names, lower_bounds, upper_bounds, strict=True):
         key = f"{name}Step"
         if key in constraints_dict:
             step = require_positive(key, constraints_dict[key])

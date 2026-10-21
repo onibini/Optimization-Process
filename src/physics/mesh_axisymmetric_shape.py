@@ -16,8 +16,6 @@ surface mesh를 생성한다.
     - gmsh를 활용한 시각화 및 파일 출력
 """
 
-from __future__ import annotations  # list[tuple[...]] 주석을 Python 3.8에서도 허용
-
 import numpy as np
 
 

@@ -11,7 +11,7 @@
 이 프로젝트는 GitHub 공개를 전제로 합니다. 파일을 추가·이동할 때 아래 구조를 지킵니다.
 
 ```
-├── .github/workflows/python-tests.yml  # lint(ruff) + 테스트(Python 3.8 / 3.12)
+├── .github/workflows/python-tests.yml  # lint(ruff) + 테스트(Python 3.10 / 3.12)
 ├── .github/ISSUE_TEMPLATE/ + pull_request_template.md
 ├── .gitignore / .gitattributes
 ├── CHANGELOG.md               # 모든 변경을 [Unreleased]에 기록
@@ -32,7 +32,7 @@
 - 실행 산출물(`logs/`, `workspace/`, `__pycache__/`)은 커밋하지 않습니다.
 - 새 기능/수정에는 `tests/`에 테스트를 추가합니다. 테스트는 WAMIT·gmsh 없이 돌아가야 합니다.
 - 작업 완료 전 반드시 확인: `ruff check .`, `ruff format --check .`, `python -m unittest discover -s tests`.
-- Python 3.8 호환을 유지합니다 (`ruff.toml`의 `target-version = "py38"`).
+- Python 3.10 이상을 지원합니다 (`ruff.toml`의 `target-version = "py310"`).
 
 ## 3. 업데이트 보고서 (매 업데이트 필수)
 - 위치: `docs/reports/YYYY-MM-DD_NN_<짧은-제목>.md` (NN = 그날의 순번)

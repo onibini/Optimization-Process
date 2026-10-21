@@ -43,7 +43,7 @@ This repository contains Python-based optimization tools designed to optimize th
 
 ## Prerequisites
 
-- **Python**: Version 3.8 or higher.
+- **Python**: Version 3.10 or higher.
 - **WAMIT**: WAMIT v7 (32-bit), a commercial BEM solver that is **not included** in this repository and requires your own license. Hydrodynamic evaluation is Windows-only. Without WAMIT you can still run the unit tests and lint (`python -m unittest discover -s tests`).
   - The executable is looked up in this order: `WAMITPath` in [config.cfg](config.cfg) → environment variable `WAMIT_EXE` → `C:\WAMITv7\WAMIT.exe`.
   - If the path contains spaces, use the `WAMIT_EXE` environment variable (config values cannot contain spaces).
@@ -101,7 +101,7 @@ ruff check .                           # lint
 ruff format .                          # format
 ```
 
-GitHub Actions ([python-tests.yml](.github/workflows/python-tests.yml)) runs the same lint and test steps on Python 3.8 and 3.12 for every push and pull request.
+GitHub Actions ([python-tests.yml](.github/workflows/python-tests.yml)) runs the same lint and test steps on Python 3.10 and 3.12 for every push and pull request.
 
 Every update is recorded in [CHANGELOG.md](CHANGELOG.md) with a detailed report under [docs/reports/](docs/reports/).
 

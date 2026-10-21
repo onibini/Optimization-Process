@@ -19,7 +19,7 @@ RHO, G = 1025.0, 9.80665
 def _write_force(path, re_im_by_omega):
     with open(path, "w") as f:
         f.write(" WAMIT Numeric Output\n")
-        for w, (re, im) in zip(OMEGAS, re_im_by_omega):
+        for w, (re, im) in zip(OMEGAS, re_im_by_omega, strict=True):
             f.write(f"  {w:.6E}  0.000000E+00     3  0.0  0.0  {re:.6E}  {im:.6E}\n")
 
 
@@ -52,7 +52,7 @@ class TestExcitationSource(unittest.TestCase):
             haskind = _rao(d, excitation="haskind")
         self.assertEqual(default, diffraction)
         # 합성 데이터에서 .3의 가진력은 .2의 정확히 2배 -> RAO(선형)도 2배
-        for diff, hask in zip(diffraction, haskind):
+        for diff, hask in zip(diffraction, haskind, strict=True):
             self.assertAlmostEqual(diff / hask, 2.0, places=9)
 
     def test_default_does_not_need_haskind_file(self):

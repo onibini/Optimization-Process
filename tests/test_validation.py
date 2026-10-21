@@ -35,7 +35,7 @@ class TestProjectConfigIsValid(unittest.TestCase):
                 problem = builder(constraints, params, n, ENV, WAMIT, 2)
                 lower, upper = problem["bounds"]
                 self.assertTrue(all(lo > 0 for lo in lower), (builder.__name__, n))
-                self.assertTrue(all(hi > lo for lo, hi in zip(lower, upper)), (builder.__name__, n))
+                self.assertTrue(all(hi > lo for lo, hi in zip(lower, upper, strict=True)), (builder.__name__, n))
 
 
 class TestRejectsNonPositive(unittest.TestCase):

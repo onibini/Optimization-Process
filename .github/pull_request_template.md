@@ -6,4 +6,4 @@
 - [ ] `python -m unittest discover -s tests` passes (no WAMIT required)
 - [ ] Tests added or updated for behavior changes
 - [ ] `CHANGELOG.md` updated and a report added under `docs/reports/`
-- [ ] Python 3.8 compatible
+- [ ] Python 3.10 compatible
