@@ -73,7 +73,7 @@ def main(cfg_path="config.cfg"):
     # 4. WAMIT 설정 로드
     ncpu = int(cfg["WAMIT Settings"]["NCPU"])
     ram = int(cfg["WAMIT Settings"]["RAMGBMAX"])
-    wamit_data = {"NCPU": ncpu, "RAMGBMAX": ram}
+    wamit_data = {"NCPU": ncpu, "RAMGBMAX": ram, "WAMITPath": cfg["WAMIT Settings"].get("WAMITPath")}
 
     if opt_mode == 1:
         print("Mode: [Geometry Optimization] - Number of WEC: 1")

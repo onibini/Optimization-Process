@@ -12,9 +12,11 @@
 
 ```
 ├── .github/workflows/python-tests.yml  # lint(ruff) + 테스트(Python 3.8 / 3.12)
+├── .github/ISSUE_TEMPLATE/ + pull_request_template.md
 ├── .gitignore / .gitattributes
 ├── CHANGELOG.md               # 모든 변경을 [Unreleased]에 기록
 ├── CLAUDE.md                  # (이 파일)
+├── CONTRIBUTING.md            # 기여 안내
 ├── LICENSE                    # MIT
 ├── README.md
 ├── main.py / config.cfg

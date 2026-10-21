@@ -16,7 +16,7 @@ This repository contains Python-based optimization tools designed to optimize th
 ## Directory Structure
 
 ```
-├── .github/workflows/     # CI: ruff + unit tests on every push / pull request
+├── .github/               # CI (workflows/python-tests.yml), issue and pull request templates
 ├── main.py                # Main script to configure and execute optimization
 ├── config.cfg             # Configuration file (parameters, constraints, settings)
 ├── requirements.txt       # Runtime dependencies
@@ -24,6 +24,7 @@ This repository contains Python-based optimization tools designed to optimize th
 ├── ruff.toml              # Lint / format settings (ruff)
 ├── CHANGELOG.md           # Change history
 ├── CLAUDE.md              # Working rules for AI assistants
+├── CONTRIBUTING.md        # How to report issues and contribute
 ├── LICENSE                # MIT
 ├── data/
 │   └── env_data.csv       # Ocean environment wave spectrum parameters by site
@@ -43,7 +44,9 @@ This repository contains Python-based optimization tools designed to optimize th
 ## Prerequisites
 
 - **Python**: Version 3.8 or higher.
-- **WAMIT**: WAMIT v7 (installed by default in `C:\WAMITv7` on Windows).
+- **WAMIT**: WAMIT v7 (32-bit), a commercial BEM solver that is **not included** in this repository and requires your own license. Hydrodynamic evaluation is Windows-only. Without WAMIT you can still run the unit tests and lint (`python -m unittest discover -s tests`).
+  - The executable is looked up in this order: `WAMITPath` in [config.cfg](config.cfg) → environment variable `WAMIT_EXE` → `C:\WAMITv7\WAMIT.exe`.
+  - If the path contains spaces, use the `WAMIT_EXE` environment variable (config values cannot contain spaces).
 
 ---
 

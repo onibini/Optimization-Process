@@ -155,8 +155,19 @@ def _tail(text, n_lines=20):
     return "\n".join(lines[-n_lines:])
 
 
-def run_wamit(workspace_dir, exe_path=r"C:\WAMITv7\WAMIT.exe"):
+DEFAULT_WAMIT_EXE = r"C:\WAMITv7\WAMIT.exe"
+WAMIT_EXE_ENV_VAR = "WAMIT_EXE"
+
+
+def resolve_wamit_exe(configured=None):
+    """WAMIT 실행 파일 경로를 정합니다. 우선순위: 인자(config.cfg의 WAMITPath) > 환경 변수 WAMIT_EXE > 기본 경로."""
+    return configured or os.environ.get(WAMIT_EXE_ENV_VAR) or DEFAULT_WAMIT_EXE
+
+
+def run_wamit(workspace_dir, exe_path=None):
     """작업 디렉토리에서 WAMIT을 직접 실행합니다.
+
+    ``exe_path``를 생략하면 환경 변수 ``WAMIT_EXE``, 그것도 없으면 ``DEFAULT_WAMIT_EXE``를 사용합니다.
 
     이전 실행의 출력이 남아 있으면 이번 실행이 실패해도 옛 결과를 읽을 수 있으므로 먼저 지웁니다.
     실패 시에는 WAMIT의 stdout/stderr와 errorp.log/errorf.log 마지막 부분을 예외 메시지에 담습니다.
@@ -167,6 +178,7 @@ def run_wamit(workspace_dir, exe_path=r"C:\WAMITv7\WAMIT.exe"):
         if os.path.exists(file_path):
             os.remove(file_path)
 
+    exe_path = resolve_wamit_exe(exe_path)
     if not os.path.exists(exe_path):
         raise WamitRunError(f"WAMIT executable not found: {exe_path}")
 

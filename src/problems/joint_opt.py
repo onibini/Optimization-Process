@@ -37,6 +37,7 @@ def get_joint_config(constraints_dict, params_dict, num_wecs, env_data, wamit_da
         "depth": env_data["Depth"],
         "ncpu": wamit_data["NCPU"],
         "ram": wamit_data["RAMGBMAX"],
+        "wamit_exe": wamit_data.get("WAMITPath"),
     }
 
 
@@ -61,7 +62,7 @@ def evaluate_joint(vector, config):
 
     workspace_dir = "workspace"
     write_wamit_inputs(vector, config, workspace_dir, positions=positions)
-    run_wamit(workspace_dir)
+    run_wamit(workspace_dir, config.get("wamit_exe"))
     rao_values = calculate_rao_matrix(workspace_dir, config["num_wecs"])
     total_power, individual_powers = calculate_power(rao_values, config)
 

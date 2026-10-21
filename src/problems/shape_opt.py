@@ -31,6 +31,7 @@ def get_shape_config(constraints_dict: dict, env_data: dict, wamit_data: dict, w
         "depth": env_data["Depth"],
         "ncpu": wamit_data["NCPU"],
         "ram": wamit_data["RAMGBMAX"],
+        "wamit_exe": wamit_data.get("WAMITPath"),
     }
 
 
@@ -42,7 +43,7 @@ def evaluate_shape(vector, config):
     workspace_dir = "workspace"
 
     write_wamit_inputs(vector, config, workspace_dir)
-    run_wamit(workspace_dir)
+    run_wamit(workspace_dir, config.get("wamit_exe"))
     rao_data = calculate_rao_matrix(workspace_dir, config["num_wecs"])
     total_power, individual_powers = calculate_power(rao_data, config)
 

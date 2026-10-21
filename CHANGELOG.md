@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — GitHub 공개 준비 보강
+보고서: [docs/reports/2026-10-21_07_github-readiness.md](docs/reports/2026-10-21_07_github-readiness.md)
+
+#### Added
+- WAMIT 실행 파일 경로 설정: `config.cfg`의 `WAMITPath` 또는 환경 변수 `WAMIT_EXE` (기본값은 기존과 동일). 테스트 4건.
+- `CONTRIBUTING.md`, 이슈/PR 템플릿.
+
+#### Changed
+- README Prerequisites에 WAMIT 상용 라이선스·Windows 전용 안내 추가.
+
 ### 2026-10-21 — 미사용 코드와 빈 폴더 정리
 보고서: [docs/reports/2026-10-21_06_cleanup-unused-code.md](docs/reports/2026-10-21_06_cleanup-unused-code.md)
 

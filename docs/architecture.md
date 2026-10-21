@@ -20,7 +20,9 @@ This project is a scientific optimization framework written in Python. It optimi
 ├── ruff.toml                  # Ruff lint/format configuration.
 ├── CHANGELOG.md               # Change history ([Unreleased] + released versions).
 ├── CLAUDE.md                  # Working rules for AI assistants (read first).
+├── CONTRIBUTING.md            # Contribution guide (setup, checks, report/CHANGELOG rules).
 ├── .github/workflows/python-tests.yml  # GitHub Actions: ruff lint/format + unittest (Python 3.8, 3.12).
+├── .github/ISSUE_TEMPLATE/, pull_request_template.md  # Issue / PR templates.
 │
 ├── data/
 │   └── env_data.csv           # Significant wave heights (Hs), wave periods (Tp), water depths (Depth) by site.
