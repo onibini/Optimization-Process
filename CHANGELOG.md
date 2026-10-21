@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — 미사용 코드와 빈 폴더 정리
+보고서: [docs/reports/2026-10-21_06_cleanup-unused-code.md](docs/reports/2026-10-21_06_cleanup-unused-code.md)
+
+#### Removed
+- 호출되지 않던 `calculate_pierson_moskowitz`와 `mesh_axisymmetric_shape.py`의 미사용 생성 함수 8개, 빈 폴더 `.agents/`, `results/`, 이로써 미사용이 된 프로파일 함수 6개, `requirements.txt`의 `matplotlib`.
+
 ### 2026-10-21 — CI 워크플로를 python-tests.yml로 통합
 보고서: [docs/reports/2026-10-21_05_ci-workflow.md](docs/reports/2026-10-21_05_ci-workflow.md)
 

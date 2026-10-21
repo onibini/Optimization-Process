@@ -1,23 +1,6 @@
 import numpy as np
 
 
-def calculate_pierson_moskowitz(omega, Hs, Tp):
-    """
-    유의파고와 피크주기를 바탕으로 스펙트럼 계산
-    """
-    wp = 2.0 * np.pi / Tp
-
-    w = np.maximum(omega, 1e-10)
-
-    a = (5.0 / 16.0) * (Hs**2) * (wp**4)
-    b = -1.25 * ((w / wp) ** -4)
-
-    S_pm = a * (w**-5) * np.exp(b)
-
-    S_pm[omega == 0] = 0.0
-    return S_pm
-
-
 def get_jonswap_spectrum(omega, Hs, Tp, gamma, spec_type):
     """
     spec_type에 따라 다른 Form의 JONSWAP 스펙트럼을 반환합니다.

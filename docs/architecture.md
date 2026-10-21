@@ -15,7 +15,7 @@ This project is a scientific optimization framework written in Python. It optimi
 ```
 ├── main.py                    # Entry point. Parses config, builds the problem, runs the engine, prints the best design.
 ├── config.cfg                 # Optimization parameters, limits, constraints, and physical environment specifications.
-├── requirements.txt           # External Python library dependencies (numpy, scipy, matplotlib, gmsh).
+├── requirements.txt           # External Python library dependencies (numpy, scipy, gmsh).
 ├── requirements-dev.txt       # Development dependencies (ruff).
 ├── ruff.toml                  # Ruff lint/format configuration.
 ├── CHANGELOG.md               # Change history ([Unreleased] + released versions).
