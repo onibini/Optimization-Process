@@ -35,7 +35,7 @@
 | `.gitignore` | `__pycache__/`, 가상환경, IDE, `logs/`, `workspace/` 제외 |
 | `.gitattributes` | 저장소 줄바꿈 LF 통일(Windows 체크아웃 시 자동 변환), `*.p2f` 바이너리 |
 | `requirements-dev.txt` | 런타임 의존성 + `ruff==0.16.9` |
-| `.github/workflows/ci.yml` | push/PR마다 ruff check, ruff format --check, unittest 실행(Python 3.8, 3.12) |
+| `.github/workflows/python-tests.yml` | push/PR마다 ruff check, ruff format --check, unittest 실행(Python 3.8, 3.12) |
 | `CHANGELOG.md` | Keep a Changelog 형식, 보고서 링크 |
 | `CLAUDE.md` | AI 어시스턴트 작업 규칙(직접 반영, GitHub 구조, 보고서 필수, 양수 규칙) |
 | `docs/reports/` | 업데이트별 보고서(이 문서 포함) |

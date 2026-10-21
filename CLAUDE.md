@@ -11,7 +11,7 @@
 이 프로젝트는 GitHub 공개를 전제로 합니다. 파일을 추가·이동할 때 아래 구조를 지킵니다.
 
 ```
-├── .github/workflows/ci.yml   # lint(ruff) + 테스트(Python 3.8 / 3.12)
+├── .github/workflows/python-tests.yml  # lint(ruff) + 테스트(Python 3.8 / 3.12)
 ├── .gitignore / .gitattributes
 ├── CHANGELOG.md               # 모든 변경을 [Unreleased]에 기록
 ├── CLAUDE.md                  # (이 파일)

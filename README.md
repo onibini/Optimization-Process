@@ -98,7 +98,7 @@ ruff check .                           # lint
 ruff format .                          # format
 ```
 
-GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs the same lint and test steps on Python 3.8 and 3.12 for every push and pull request.
+GitHub Actions ([python-tests.yml](.github/workflows/python-tests.yml)) runs the same lint and test steps on Python 3.8 and 3.12 for every push and pull request.
 
 Every update is recorded in [CHANGELOG.md](CHANGELOG.md) with a detailed report under [docs/reports/](docs/reports/).
 

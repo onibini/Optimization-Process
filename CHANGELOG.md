@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — CI 워크플로를 python-tests.yml로 통합
+보고서: [docs/reports/2026-10-21_05_ci-workflow.md](docs/reports/2026-10-21_05_ci-workflow.md)
+
+#### Changed
+- `.github/workflows/python-tests.yml`을 ruff lint 잡과 Python 3.8/3.12 전체 테스트(`unittest discover`) 매트릭스로 확장. 문서의 `ci.yml` 표기를 모두 `python-tests.yml`로 변경.
+
 ### 2026-10-21 — RAO 가진력을 diffraction(.3) 기준으로 변경
 보고서: [docs/reports/2026-10-21_04_diffraction-excitation.md](docs/reports/2026-10-21_04_diffraction-excitation.md)
 
@@ -35,7 +41,7 @@
 #### Added
 - `src/utils/validation.py`: 설계 변수 탐색 범위 `0 < Min < Max`, 형상·격자 파라미터 `> 0` 검증 (`ConfigValidationError`).
 - `tests/test_validation.py`: 양수 규칙 테스트 10건.
-- GitHub 구성: `.gitignore`, `.gitattributes`, `requirements-dev.txt`, `.github/workflows/ci.yml`, `CHANGELOG.md`, `CLAUDE.md`, `docs/reports/`.
+- GitHub 구성: `.gitignore`, `.gitattributes`, `requirements-dev.txt`, `.github/workflows/python-tests.yml`, `CHANGELOG.md`, `CLAUDE.md`, `docs/reports/`.
 
 #### Changed
 - `config.cfg`: `WEC2_YMin`, `WEC3_YMin`을 0에서 0.1로 변경. 설계 변수 주석을 `[Float > 0]`로 표기.
