@@ -1,11 +1,20 @@
-import numpy as np
 import time
-from src.algorithms.common import CachedEvaluator, OptimizationLogger, get_step_size, quantize_vector, random_grid_population
+
+import numpy as np
+
+from src.algorithms.common import (
+    CachedEvaluator,
+    OptimizationLogger,
+    get_step_size,
+    quantize_vector,
+    random_grid_population,
+)
+
 
 def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
     """
     유전 알고리즘(Genetic Algorithm) 메인 엔진
-    
+
     :param config: 문제 설정 (dimensions, bounds 등 포함)
     :param eval_func: 평가 함수
     :param pop_size: 개체군 크기
@@ -13,16 +22,21 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
     :param mutation_rate: 돌연변이 발생 확률 (기본값 0.1)
     :return: (최적 설계 변수, 최적 발전량)
     """
-    
-    dimensions = config['dimensions']
-    lower_bounds, upper_bounds = np.array(config['bounds'][0]), np.array(config['bounds'][1])
-    logger = OptimizationLogger(config, suffix="ga")
+    if pop_size < 4:
+        raise ValueError("GA tournament selection requires PopSize >= 4.")
+
+    dimensions = config["dimensions"]
+    lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
+    logger = OptimizationLogger(config, algorithm="ga")
     evaluator = CachedEvaluator(config, eval_func, logger)
-    
+
     # 1. 초기 군집 생성
     population = random_grid_population(pop_size, config)
     step_size = get_step_size(config)
+    mutation_span = np.maximum(1, np.ceil((upper_bounds - lower_bounds) * 0.1 / step_size).astype(int))
 
+    best_x, best_f, best_p = None, -np.inf, []
+    gens_done = 0
     try:
         print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
         fitness = np.zeros(pop_size)
@@ -34,11 +48,11 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
             ind_powers_pop.append(p_list)
 
         best_idx = np.argmax(fitness)
-        best_x = population[best_idx]
+        best_x = population[best_idx].copy()
         best_f = fitness[best_idx]
         best_p = ind_powers_pop[best_idx]
 
-        print(f"초기 세대 최적 발전량: {best_f/1000:,.4f} kW")
+        print(f"초기 세대 최적 발전량: {best_f / 1000:,.4f} kW")
 
         for gen in range(max_iter):
             gen_start = time.time()
@@ -47,6 +61,7 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
             new_fitness = np.zeros(pop_size)
             new_ind_powers = []
 
+            # 엘리트 보존: 이전 세대 최고 개체를 0번에 유지
             current_best_idx = np.argmax(fitness)
             new_population[0] = population[current_best_idx].copy()
             new_fitness[0] = fitness[current_best_idx]
@@ -64,12 +79,8 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
                 child = np.where(cross_mask, p1, p2)
 
                 if np.random.rand() < mutation_rate:
-                    mutation_span = np.maximum(1, np.ceil((upper_bounds - lower_bounds) * 0.1 / step_size).astype(int))
                     mutation_mask = np.random.rand(dimensions) < 0.5
-                    step_offsets = np.array([
-                        np.random.randint(-span, span + 1)
-                        for span in mutation_span
-                    ])
+                    step_offsets = np.array([np.random.randint(-span, span + 1) for span in mutation_span])
                     child = child + np.where(mutation_mask, step_offsets * step_size, 0)
 
                 child = quantize_vector(child, config)
@@ -90,10 +101,12 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
                 best_p = ind_powers_pop[gen_best_idx]
 
             gen_time = time.time() - gen_start
-            logger.write_generation(gen + 1, population[gen_best_idx], fitness[gen_best_idx], ind_powers_pop[gen_best_idx], gen_time)
+            logger.write_generation(gen + 1, best_x, best_f, best_p, gen_time)
+            gens_done = gen + 1
 
-            print(f" Gen {gen+1} | Best: {best_f/1000:,.4f} kW | Hits: {evaluator.cache_hits} | Evals: {evaluator.total_evals}")
+            print(f" Gen {gen + 1} | Best: {best_f / 1000:,.4f} kW | {evaluator.progress_text()}")
     finally:
+        logger.write_summary(best_x, best_f, best_p, evaluator, gens_done)
         logger.close()
 
     return best_x, best_f

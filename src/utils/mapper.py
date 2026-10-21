@@ -1,9 +1,9 @@
 def decode_symmetric_positions(vector, num_wecs):
-    '''
+    """
     알고리즘이 1차원 배열(vector)을 규칙에 따라 실제 (x, y) 좌표 리스트로 변환
     x축을 기준으로 대칭되도록 설계
     WEC1은 항상 중앙. WEC2, WEC3 등은 사이드 쌍
-    '''
+    """
 
     positions = []
 
@@ -29,7 +29,7 @@ def decode_symmetric_positions(vector, num_wecs):
         else:
             positions.append((x2, y2))  # WEC2
             positions.append((x2, -y2))  # WEC2 대칭
-    
+
     return positions
 
 
@@ -40,17 +40,16 @@ def canonicalize_vector_inplace(vector, opt_mode, num_wecs):
     - 5기 WEC의 경우: WEC2와 WEC3 사이의 기하학적 대칭 및 순서 독립성을 해결하기 위해 (x2, y2)와 (x3, y3)를 정렬합니다.
     """
     if num_wecs == 5:
-        if opt_mode == 2:    # Layout 최적화: [x1, x2, y2, x3, y3]
+        if opt_mode == 2:  # Layout 최적화: [x1, x2, y2, x3, y3]
             offset = 0
         elif opt_mode == 3:  # Joint 최적화: [radius, draft, x1, x2, y2, x3, y3]
             offset = 2
         else:
             return
-        
-        x2, y2 = vector[offset+1], vector[offset+2]
-        x3, y3 = vector[offset+3], vector[offset+4]
-        
-        if (x2, y2) > (x3, y3):
-            vector[offset+1], vector[offset+3] = x3, x2
-            vector[offset+2], vector[offset+4] = y3, y2
 
+        x2, y2 = vector[offset + 1], vector[offset + 2]
+        x3, y3 = vector[offset + 3], vector[offset + 4]
+
+        if (x2, y2) > (x3, y3):
+            vector[offset + 1], vector[offset + 3] = x3, x2
+            vector[offset + 2], vector[offset + 4] = y3, y2

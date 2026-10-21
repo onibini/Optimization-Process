@@ -1,11 +1,21 @@
-import numpy as np
 import time
-from src.algorithms.common import CachedEvaluator, OptimizationLogger, get_step_size, quantize_vector, random_grid_population
+
+import numpy as np
+
+from src.algorithms.common import (
+    CachedEvaluator,
+    OptimizationLogger,
+    canonical_copy,
+    get_step_size,
+    quantize_vector,
+    random_grid_population,
+)
+
 
 def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     """
     입자 군집 최적화(PSO) 메인 엔진
-    
+
     :param config: 문제 설정 (dimensions, bounds 등 포함)
     :param eval_func: 평가 함수
     :param pop_size: 군집(Swarm) 크기
@@ -14,13 +24,18 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     :param c1: 인지적 계수 (Cognitive coefficient, 개인 최고 기록으로 향하는 힘)
     :param c2: 사회적 계수 (Social coefficient, 전역 최고 기록으로 향하는 힘)
     :return: (최적 설계 변수, 최적 발전량)
+
+    Note:
+        평가 시에는 입자 위치의 '사본'을 대칭 정렬(canonicalize)하여 캐시를 조회합니다.
+        입자 위치 자체를 정렬하면 5기 배치에서 (x2, y2)와 (x3, y3)가 뒤바뀌는데 속도 벡터는
+        그대로라서 입자가 순간이동하는 효과가 생기기 때문입니다.
     """
 
-    dimensions = config['dimensions']
-    lower_bounds, upper_bounds = np.array(config['bounds'][0]), np.array(config['bounds'][1])
-    logger = OptimizationLogger(config, suffix="pso")
+    dimensions = config["dimensions"]
+    lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
+    logger = OptimizationLogger(config, algorithm="pso")
     evaluator = CachedEvaluator(config, eval_func, logger)
-    
+
     # 1. 초기 군집 생성
     positions = random_grid_population(pop_size, config)
 
@@ -28,14 +43,16 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     v_max = np.maximum((upper_bounds - lower_bounds) * 0.2, step_size)
     velocities = np.random.uniform(-v_max, v_max, (pop_size, dimensions))
 
+    gbest_position, gbest_fitness, gbest_powers = None, -np.inf, []
+    gens_done = 0
     try:
         print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
-        pbest_positions= positions.copy()
+        pbest_positions = positions.copy()
         pbest_fitness = np.zeros(pop_size)
         pbest_powers = []
 
         for i in range(pop_size):
-            score, p_list = evaluator.evaluate(positions[i])
+            score, p_list = evaluator.evaluate(positions[i].copy())
             pbest_fitness[i] = score
             pbest_powers.append(p_list)
 
@@ -44,7 +61,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
         gbest_fitness = pbest_fitness[best_idx]
         gbest_powers = pbest_powers[best_idx]
 
-        print(f"초기 세대 최적 발전량: {gbest_fitness/1000:,.4f} kW")
+        print(f"초기 세대 최적 발전량: {gbest_fitness / 1000:,.4f} kW")
 
         # 2. 메인 루프
         for gen in range(max_iter):
@@ -54,15 +71,17 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
                 r1 = np.random.rand(dimensions)
                 r2 = np.random.rand(dimensions)
 
-                velocities[i] = (w * velocities[i] +
-                                c1 * r1 * (pbest_positions[i] - positions[i]) +
-                                c2 * r2 * (gbest_position - positions[i]))
+                velocities[i] = (
+                    w * velocities[i]
+                    + c1 * r1 * (pbest_positions[i] - positions[i])
+                    + c2 * r2 * (gbest_position - positions[i])
+                )
                 velocities[i] = np.clip(velocities[i], -v_max, v_max)
                 positions[i] += velocities[i]
 
                 positions[i] = quantize_vector(positions[i], config)
 
-                score, p_list = evaluator.evaluate(positions[i])
+                score, p_list = evaluator.evaluate(positions[i].copy())
 
                 if score > pbest_fitness[i]:
                     pbest_fitness[i] = score
@@ -75,10 +94,16 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
                         gbest_powers = p_list
 
             gen_time = time.time() - gen_start
-            logger.write_generation(gen + 1, gbest_position, gbest_fitness, gbest_powers, gen_time)
+            logger.write_generation(
+                gen + 1, canonical_copy(gbest_position, config), gbest_fitness, gbest_powers, gen_time
+            )
+            gens_done = gen + 1
 
-            print(f" Gen {gen+1} | Best: {gbest_fitness/1000:,.4f} kW | Hits: {evaluator.cache_hits} | Evals: {evaluator.total_evals}")
+            print(f" Gen {gen + 1} | Best: {gbest_fitness / 1000:,.4f} kW | {evaluator.progress_text()}")
     finally:
+        if gbest_position is not None:
+            gbest_position = canonical_copy(gbest_position, config)
+        logger.write_summary(gbest_position, gbest_fitness, gbest_powers, evaluator, gens_done)
         logger.close()
 
     return gbest_position, gbest_fitness

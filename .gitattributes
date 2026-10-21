@@ -1,0 +1,8 @@
+# 줄바꿈 통일: 저장소에는 LF로 저장, Windows 체크아웃 시 자동 변환
+* text=auto eol=lf
+*.cfg text eol=lf
+*.csv text eol=lf
+*.bat text eol=crlf
+
+# WAMIT 바이너리 출력 등
+*.p2f binary

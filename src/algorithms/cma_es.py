@@ -1,5 +1,7 @@
-import numpy as np
 import time
+
+import numpy as np
+
 from src.algorithms.common import CachedEvaluator, OptimizationLogger, get_step_size, quantize_vector
 
 
@@ -14,49 +16,56 @@ def _denormalize_vector(vector, lower_bounds, bounds_range):
 def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
     """
     CMA-ES (Covariance Matrix Adaptation Evolution Strategy) 메인 엔진
-    - 0.1 이산 격자(Discrete Grid) 및 메모이제이션 통합 버전
+    - 이산 격자(StepSize) 및 메모이제이션 통합 버전
     - 설계변수별 범위 차이에 강건하도록 [0, 1] 정규화 공간에서 분포를 적응
-    
+
+    격자/대칭 처리 방식:
+        분포에서 뽑은 연속 샘플을 [0, 1]로 클리핑한 뒤, 그 '사본'을 격자 스냅 + 대칭 정렬하여
+        평가(캐시 조회)합니다. 평균·공분산·진화경로 갱신에는 클리핑된 연속 샘플을 그대로 사용합니다.
+        (이전에는 대칭 정렬로 (x2, y2)<->(x3, y3)가 뒤바뀐 벡터를 갱신에 사용해서,
+        5기 배치에서 샘플과 갱신 벡터의 대응이 깨지고 분포가 왜곡될 수 있었습니다.)
+
     :param sigma_init: 초기 탐색 보폭 (전체 탐색 범위 대비 비율, 기본 30%)
     """
+    if pop_size < 4:
+        raise ValueError("CMA-ES requires PopSize >= 4.")
 
-    dimensions = config['dimensions']
-    lower_bounds, upper_bounds = np.array(config['bounds'][0]), np.array(config['bounds'][1])
+    dimensions = config["dimensions"]
+    lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
     bounds_range = upper_bounds - lower_bounds
     if np.any(bounds_range <= 0):
         raise ValueError("CMA-ES requires every upper bound to be greater than its lower bound.")
 
-    logger = OptimizationLogger(config, suffix="cmaes")
+    logger = OptimizationLogger(config, algorithm="cmaes")
     evaluator = CachedEvaluator(config, eval_func, logger)
-    
-    
+
     # ==========================================
     # CMA-ES 내부 파라미터 셋업 (Canonical Math)
     # ==========================================
     N = dimensions
     step_size = get_step_size(config)
-    lambda_ = pop_size # Offspring 수
+    lambda_ = pop_size  # Offspring 수
     mu = lambda_ // 2  # 부모 수 (일반적으로 λ/2)
 
     # 가중치 및 실효 선택 질량
     weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
     weights = weights / np.sum(weights)
-    mueff = np.sum(weights)**2 / np.sum(weights**2)
+    mueff = np.sum(weights) ** 2 / np.sum(weights**2)
 
     # 학습률 설정
     cc = (4 + mueff / N) / (N + 4 + 2 * mueff / N)
     cs = (mueff + 2) / (N + mu)
-    c1 = 2 / ((N + 1.3)**2 + mueff)
-    cmu = min(1 - c1, 2 * (mueff - 2 + 1 / mueff) / ((N + 2)**2 + mueff))
+    c1 = 2 / ((N + 1.3) ** 2 + mueff)
+    cmu = min(1 - c1, 2 * (mueff - 2 + 1 / mueff) / ((N + 2) ** 2 + mueff))
     damps = 1 + 2 * max(0, np.sqrt((mueff - 1) / (N + 1)) - 1) + cs
 
     # 진화 상태 변수 초기화
-    m = np.random.rand(N) # 초기 평균 ([0, 1] 정규화 공간)
-    sigma = float(sigma_init) # 초기 탐색 보폭 (정규화 공간 비율)
+    m = np.random.rand(N)  # 초기 평균 ([0, 1] 정규화 공간)
+    sigma = float(sigma_init)  # 초기 탐색 보폭 (정규화 공간 비율)
     min_sigma = np.min(step_size / bounds_range)
 
-    pc = np.zeros(N) # 공분산 진화 경로
-    ps = np.zeros(N) # 보폭 진화 경로
+    pc = np.zeros(N)  # 공분산 진화 경로
+    ps = np.zeros(N)  # 보폭 진화 경로
     B = np.eye(N)
     D = np.ones(N)
     C = np.eye(N)
@@ -64,29 +73,28 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
     echi = np.sqrt(N) * (1 - 1 / (4 * N) + 1 / (21 * N**2))
 
     best_x, best_f, best_p = None, -np.inf, []
+    gens_done = 0
 
-    print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
+    print(f"최적화 시작: 세대당 {lambda_}개 샘플, 최대 {max_iter}세대")
 
     try:
         # 2. 메인 루프
         for gen in range(max_iter):
             gen_start = time.time()
 
-            arx = np.zeros((lambda_, N)) # 정규화 공간의 평가 완료 후보
-            arz = np.zeros((lambda_, N))
+            arx = np.zeros((lambda_, N))  # 정규화 공간의 (클리핑된) 연속 샘플
             fitness = np.zeros(lambda_)
 
             # 1. 자식 개체 생성 및 평가
             for k in range(lambda_):
-                arz[k] = np.random.randn(N)
-                candidate_z = m + sigma * (B @ (D * arz[k]))
-                candidate_z = np.clip(candidate_z, 0.0, 1.0)
+                z = np.random.randn(N)
+                candidate = np.clip(m + sigma * (B @ (D * z)), 0.0, 1.0)
+                arx[k] = candidate
 
-                eval_x = quantize_vector(_denormalize_vector(candidate_z, lower_bounds, bounds_range), config)
-
+                # 평가용 사본: 격자 스냅 후 CachedEvaluator가 제자리에서 대칭 정렬함
+                eval_x = quantize_vector(_denormalize_vector(candidate, lower_bounds, bounds_range), config)
                 score, p_list = evaluator.evaluate(eval_x)
                 fitness[k] = score
-                arx[k] = _normalize_vector(eval_x, lower_bounds, bounds_range)
 
                 if score > best_f:
                     best_f = score
@@ -95,25 +103,26 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
 
             # 2. 적합도 기준 내림차순 정렬
             arindex = np.argsort(fitness)[::-1]
-            # 3. 평균 업데이트
+            # 3. 평균 업데이트 (상위 mu개 연속 샘플의 가중 평균)
             m_old = m.copy()
-            # 상위 m개의 원래 분포 샘플을 사용하여 평균 이동
             m = np.sum(weights[:, np.newaxis] * arx[arindex[:mu]], axis=0)
 
             # 4. 진화 경로
             ps = (1 - cs) * ps + np.sqrt(cs * (2 - cs) * mueff) * invsqrtC @ (m - m_old) / sigma
 
             # hsig: Step size가 너무 커지는 것을 막는 Heuristic Trigger
-            hsig = np.linalg.norm(ps) / np.sqrt(1 - (1 - cs)**(2 * (gen + 1))) < (1.4 + 2 / (N + 1)) * echi
+            hsig = np.linalg.norm(ps) / np.sqrt(1 - (1 - cs) ** (2 * (gen + 1))) < (1.4 + 2 / (N + 1)) * echi
             pc = (1 - cc) * pc + hsig * np.sqrt(cc * (2 - cc) * mueff) * (m - m_old) / sigma
 
             # 5. 공분산 행렬 C 업데이트
             artmp = (1 / sigma) * (arx[arindex[:mu]] - m_old)
-            C = ((1 - c1 - cmu) * C
-                 + c1 * (np.outer(pc, pc) + (1 - hsig) * cc * (2 - cc) * C)
-                 + cmu * artmp.T @ np.diag(weights) @ artmp)
+            C = (
+                (1 - c1 - cmu) * C
+                + c1 * (np.outer(pc, pc) + (1 - hsig) * cc * (2 - cc) * C)
+                + cmu * artmp.T @ np.diag(weights) @ artmp
+            )
 
-            # 6. 보폭 sigma 업데이트
+            # 6. 보폭 sigma 업데이트 (격자 한 칸보다 작아지지 않도록 하한)
             sigma = sigma * np.exp((cs / damps) * (np.linalg.norm(ps) / echi - 1))
             sigma = max(sigma, min_sigma)
 
@@ -126,9 +135,11 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
 
             gen_time = time.time() - gen_start
             logger.write_generation(gen + 1, best_x, best_f, best_p, gen_time)
+            gens_done = gen + 1
 
-            print(f" Gen {gen+1} | Best: {best_f/1000:,.4f} kW | Hits: {evaluator.cache_hits} | Evals: {evaluator.total_evals}")
+            print(f" Gen {gen + 1} | Best: {best_f / 1000:,.4f} kW | {evaluator.progress_text()}")
     finally:
+        logger.write_summary(best_x, best_f, best_p, evaluator, gens_done)
         logger.close()
 
     return best_x, best_f

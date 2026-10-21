@@ -1,0 +1,22 @@
+# Ruff 설정 (lint + format)
+line-length = 120
+target-version = "py38"
+extend-exclude = ["workspace", "logs"]
+
+[lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import 정렬
+    "B",       # bugbear (잠재 버그)
+    "UP",      # pyupgrade
+    "SIM",     # 단순화
+    "C4",      # comprehension
+    "RUF",     # ruff 고유 규칙
+]
+ignore = [
+    "RUF001", "RUF002", "RUF003",  # 한글/그리스 문자(π, σ, λ 등) 주석·문서 허용
+]
+
+[lint.isort]
+known-first-party = ["src"]

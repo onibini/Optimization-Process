@@ -4,14 +4,25 @@ This document describes the key mathematical conventions, vector formats, and ge
 
 ---
 
+## 0. Positivity Rule for Design Variables
+
+**Every design variable is strictly positive.** This covers the radius $R$, the cylindrical draft $D$, and all WEC coordinates $x_i, y_i$ in the optimization vector.
+- Search bounds in `config.cfg` must satisfy $0 < \text{Min} < \text{Max}$ for every variable used by the selected mode. `FixedRadius`, `FixedDraft`, `MinSpacing` and `StepSize` must also be $> 0$.
+- This is checked when the problem is built (`get_shape_config` / `get_layout_config` / `get_joint_config` → `src/utils/validation.py`) and raises `ConfigValidationError` listing every offending variable.
+- Because every candidate is clipped to $[\text{Min}, \text{Max}]$ during grid quantization, all evaluated vectors stay positive during the whole optimization.
+- The *mirrored* bodies of side pairs are placed at $-y_i$ by the mapper; that is a derived physical coordinate, not a design variable.
+- The total draft of the body is $D + R$ (hemispherical bottom of radius $R$ under the cylinder of length $D$).
+
+---
+
 ## 1. WEC Array Symmetry Model
 
 To reduce the dimensionality of the search space, WEC arrays are assumed to be symmetric with respect to the X-axis ($y = 0$).
 - **WEC 1** (Center WEC): Always placed on the X-axis (coordinates: $(x_1, 0.0)$).
-- **WEC 2 & 3** (Side WEC Pairs): Mirror-placed across the X-axis. 
+- **WEC 2 & 3** (Side WEC Pairs): Mirror-placed across the X-axis.
   - If a side WEC is at $(x_2, y_2)$, its symmetric partner is at $(x_2, -y_2)$.
   - Consequently, each side pair adds 2 variables to the vector but defines 2 physical bodies in the simulation.
-  - Variable $y_i$ is kept non-negative ($y_i \ge 0$).
+  - Variable $y_i$ is strictly positive ($y_i > 0$), so a side WEC never coincides with its mirror image.
 
 ---
 
@@ -51,3 +62,5 @@ To eliminate this redundancy, we apply `canonicalize_vector_inplace` to any tria
 3. If $(x_2, y_2) > (x_3, y_3)$, swap their values in the vector.
 
 This guarantees that the vector is always represented in its ascending sorted state, i.e., $(x_2, y_2) \le (x_3, y_3)$, which solves the caching and search-space redundancy.
+
+PSO and CMA-ES pass a canonicalized *copy* to the evaluator so their internal state (particle position/velocity, sampled points) is not reordered; their reported best designs are canonical.
