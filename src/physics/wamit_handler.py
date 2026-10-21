@@ -1,8 +1,13 @@
 import json
 import os
 import subprocess
+import warnings
 
-from src.physics.mesh_axisymmetric_shape import generate_cylinder_hemisphere_mesh
+from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, generate_cylinder_hemisphere_mesh
+
+# 32-bit WAMIT은 (기수 x 기당 패널 수)가 약 1,100을 넘으면 메모리 할당 오류가 납니다 (R=2.5, D=5.0, 5기 실측:
+# 1,075 성공, 1,120~1,380 실패). 이 값을 넘기면 경고합니다. 실제 한계는 형상·배치에 따라 다를 수 있습니다.
+PANEL_MEMORY_WARN = 1000
 
 
 def write_wamit_inputs(vector, config, workspace_dir, positions=None):
@@ -34,10 +39,17 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
 
     gdf_filename = "wec.gdf"
     gdf_path = os.path.join(workspace_dir, gdf_filename)
-    max_elements = 300
+    target_panels = int(config.get("mesh_panels") or DEFAULT_QUARTER_PANELS)
+    total_panels = target_panels * len(body_positions)
+    if total_panels > PANEL_MEMORY_WARN:
+        warnings.warn(
+            f"MeshPanels({target_panels}) x {len(body_positions)} bodies = {total_panels} panels "
+            f"exceeds {PANEL_MEMORY_WARN}; 32-bit WAMIT may fail with an allocation error.",
+            stacklevel=2,
+        )
 
     # 2. GDF 파일 생성
-    write_gdf_if_needed(gdf_path, radius, draft, max_elements)
+    write_gdf_if_needed(gdf_path, radius, draft, target_panels)
 
     # 3. fnames.wam 작성
     with open(os.path.join(workspace_dir, "fnames.wam"), "w") as f:
@@ -58,12 +70,13 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
     write_config_wam(workspace_dir, NCPU, RAMGBMAX)
 
 
-def write_gdf_if_needed(gdf_path, radius, draft, max_elements):
+def write_gdf_if_needed(gdf_path, radius, draft, target_panels):
     meta_path = f"{gdf_path}.meta.json"
     mesh_meta = {
         "radius": round(float(radius), 10),
         "draft": round(float(draft), 10),
-        "max_elements": int(max_elements),
+        "target_panels": int(target_panels),
+        "mesh": "cubed-sphere-v1",
     }
 
     if os.path.exists(gdf_path) and os.path.exists(meta_path):
@@ -74,9 +87,7 @@ def write_gdf_if_needed(gdf_path, radius, draft, max_elements):
         except (OSError, json.JSONDecodeError):
             pass
 
-    generate_cylinder_hemisphere_mesh(
-        radius=radius, draft_cylinder=draft, max_elements=max_elements, output_path=gdf_path, display_mesh=False
-    )
+    generate_cylinder_hemisphere_mesh(radius, draft, target_panels=target_panels, output_path=gdf_path)
 
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(mesh_meta, f, indent=2)

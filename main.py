@@ -3,6 +3,7 @@ import sys
 import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_ga, run_pso
+from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, MIN_QUARTER_PANELS
 from src.problems import (
     evaluate_joint,
     evaluate_layout,
@@ -73,7 +74,16 @@ def main(cfg_path="config.cfg"):
     # 4. WAMIT 설정 로드
     ncpu = int(cfg["WAMIT Settings"]["NCPU"])
     ram = int(cfg["WAMIT Settings"]["RAMGBMAX"])
-    wamit_data = {"NCPU": ncpu, "RAMGBMAX": ram, "WAMITPath": cfg["WAMIT Settings"].get("WAMITPath")}
+    mesh_panels = int(cfg["WAMIT Settings"].get("MeshPanels", DEFAULT_QUARTER_PANELS))
+    if mesh_panels < MIN_QUARTER_PANELS:
+        print(f"Error: MeshPanels must be >= {MIN_QUARTER_PANELS}, got {mesh_panels}.")
+        sys.exit(1)
+    wamit_data = {
+        "NCPU": ncpu,
+        "RAMGBMAX": ram,
+        "WAMITPath": cfg["WAMIT Settings"].get("WAMITPath"),
+        "MeshPanels": mesh_panels,
+    }
 
     if opt_mode == 1:
         print("Mode: [Geometry Optimization] - Number of WEC: 1")

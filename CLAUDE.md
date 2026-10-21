@@ -30,7 +30,7 @@
 ```
 
 - 실행 산출물(`logs/`, `workspace/`, `__pycache__/`)은 커밋하지 않습니다.
-- 새 기능/수정에는 `tests/`에 테스트를 추가합니다. 테스트는 WAMIT·gmsh 없이 돌아가야 합니다.
+- 새 기능/수정에는 `tests/`에 테스트를 추가합니다. 테스트는 WAMIT 없이 돌아가야 합니다.
 - 작업 완료 전 반드시 확인: `ruff check .`, `ruff format --check .`, `python -m unittest discover -s tests`.
 - Python 3.10 이상을 지원합니다 (`ruff.toml`의 `target-version = "py310"`).
 

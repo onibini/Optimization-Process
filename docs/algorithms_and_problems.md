@@ -13,7 +13,7 @@ $$f(\vec{v}) = P_{\text{total}}(\vec{v}) = \sum_k \int B_{\text{PTO},k}\,\omega^
 
 ### Hydrodynamic Simulation with WAMIT
 For valid configurations, the evaluation runs a boundary element method solver (WAMIT):
-1. **Mesh Generation**: Generates an axisymmetric cylinder-hemisphere mesh based on $R$ (radius) and $D$ (cylindrical draft). The total draft is $D + R$.
+1. **Mesh Generation**: Generates a cylinder-hemisphere quarter-model GDF mesh based on $R$ (radius) and $D$ (cylindrical draft). The total draft is $D + R$. The panel count per body is set directly by `MeshPanels` (hemisphere: cubed-sphere patches without pole fans; cylinder: quads with the same angular division). Because 32-bit WAMIT runs out of memory when (`MeshPanels` × number of bodies) exceeds about 1,100 and run time grows with roughly the 2.5–3rd power of the panel count, keep `MeshPanels` × `NumWECs` modest (see `config.cfg`).
 2. **Radiation/Diffraction Analysis**: WAMIT solves the velocity potentials and calculates the hydrodynamic coefficients (added mass $A(\omega)$, radiation damping $B(\omega)$, and wave excitation forces $F_{\text{exc}}(\omega)$) for $\omega = 0.5 \sim 3.0$ rad/s ($\Delta\omega = 0.05$), heading 0°.
 3. **RAO & Power Calculation**:
    - $B_{\text{PTO},k}$ is set to the radiation damping $B_{kk}(\omega_n)$ at the peak frequency of the uncontrolled RAO of body $k$.

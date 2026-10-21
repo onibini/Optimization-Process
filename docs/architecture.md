@@ -15,7 +15,7 @@ This project is a scientific optimization framework written in Python. It optimi
 ```
 ├── main.py                    # Entry point. Parses config, builds the problem, runs the engine, prints the best design.
 ├── config.cfg                 # Optimization parameters, limits, constraints, and physical environment specifications.
-├── requirements.txt           # External Python library dependencies (numpy, scipy, gmsh).
+├── requirements.txt           # External Python library dependencies (numpy, scipy).
 ├── requirements-dev.txt       # Development dependencies (ruff).
 ├── ruff.toml                  # Ruff lint/format configuration.
 ├── CHANGELOG.md               # Change history ([Unreleased] + released versions).
@@ -42,7 +42,7 @@ This project is a scientific optimization framework written in Python. It optimi
 │   │
 │   ├── physics/               # Hydrodynamic simulation wrapper and calculations
 │   │   ├── wamit_handler.py   # Writes WAMIT configuration/POT/FRC files and runs WAMIT.exe (WamitRunError on failure)
-│   │   ├── mesh_axisymmetric_shape.py # Axisymmetric WEC mesh generation (profile revolve + Gmsh export to GDF)
+│   │   ├── mesh_axisymmetric_shape.py # Cylinder + hemisphere 1/4-model GDF mesh (cubed-sphere hemisphere, panel count set by MeshPanels)
 │   │   ├── rao_calc.py        # Parses WAMIT output files (.out, .hst, .1, .3) to extract RAO matrices
 │   │   ├── power_calc.py      # Calculates power output using wave spectrum integrations
 │   │   └── wave_spectrum.py   # Generates JONSWAP wave spectrum density distributions
@@ -121,7 +121,7 @@ docs/
 - **Evaluation function contract**: `eval_func(vector, config)` returns `(score, individual_powers)` or `(score, individual_powers, info)`. Constraint-violating designs return `penalty_result(...)`, whose `info = {"penalized": True}` lets `CachedEvaluator` count them separately from real WAMIT runs (`physics_evals` vs `penalty_evals`).
 - **Cache Strategy**: Evaluation is cached by `CachedEvaluator` in `src/algorithms/common.py` on a `StepSize`-based grid-index key. Trial vectors are quantized to the configured grid and canonicalized (in place) before cache lookup. PSO and CMA-ES pass a *copy* to the evaluator so that their internal state (particle position/velocity, distribution samples) is not reordered by canonicalization.
 - **Logging**: `OptimizationLogger(config, algorithm=...)` writes `logs/{Site}_{algorithm}_{YYYYmmdd_HHMMSS}_{config.json|trial_history.csv|generation_history.csv|summary.json}`. Files are opened in exclusive-create mode and a numeric suffix is added on collision, so runs never overwrite each other. The summary is written in a `finally` block, so interrupted runs still record their best design.
-- **Mesh Reuse**: WAMIT GDF mesh generation is skipped when the existing `wec.gdf` metadata matches the requested radius, draft, and mesh density.
+- **Mesh Reuse**: WAMIT GDF mesh generation is skipped when the existing `wec.gdf` metadata matches the requested radius, draft, and target panel count (`MeshPanels`).
 - **WAMIT Interface**: Communication with WAMIT is file-based via the `./workspace` directory. Input files (`.pot`, `.frc`, `.gdf`, `fnames.wam`, `wec.cfg`, `config.wam`) are written before execution, and results (`wec.out`, `wec.1`, etc.) are parsed post-execution. Previous outputs and `errorp.log`/`errorf.log` are deleted before each run; a non-zero exit raises `WamitRunError` with WAMIT's stdout/stderr and error-log tails.
 - **Wall condition**: `wec.cfg` sets `IWALLX0=0` for OptMode 1 and `IWALLX0=1` (vertical wall on x=0) for OptMode 2 and 3.
 - **Grid steps**: `config['step_size']` is a list with one step per design variable (`resolve_step_sizes`: `{Var}Step` key, else `StepSize`). `grid_max_indices` adds a small tolerance so float error never drops the upper bound (e.g. (30-0.1)/0.1).

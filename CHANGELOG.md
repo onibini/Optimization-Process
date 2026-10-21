@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — 패널 수를 직접 지정하는 개선 메쉬
+보고서: [docs/reports/2026-10-21_09_direct-panel-mesh.md](docs/reports/2026-10-21_09_direct-panel-mesh.md)
+
+#### Added
+- `config.cfg`의 `MeshPanels`(기당 1/4 모델 목표 패널 수, 기본 80). `MeshPanels × 기수`가 1,000을 넘으면 메모리 경고. 테스트 16건.
+
+#### Changed
+- 원통+반구 메쉬를 큐브드스피어 반구 + 원통 사각형으로 재작성하고 GDF를 직접 씀. 극점 팬이 사라지고 패널이 균일해지며 같은 패널 수에서 1기 오차가 약 절반, 5기 수렴이 단조. 기본 설정에서 5기 평가가 32초 → 약 8초.
+
+#### Removed
+- `max_elements` 기반 메쉬 크기 계산, 프로파일·회전·gmsh 코드와 `gmsh` 의존성.
+
 ### 2026-10-21 — 최소 Python 버전을 3.10으로 상향
 보고서: [docs/reports/2026-10-21_08_python-3-10.md](docs/reports/2026-10-21_08_python-3-10.md)
 
