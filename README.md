@@ -69,6 +69,8 @@ Edit the [config.cfg](config.cfg) file to adjust the simulation parameters. Each
 >
 > **Grid step per variable.** `StepSize` is the default grid spacing for every design variable. To use a different spacing for one variable, add (uncomment) a `{Variable}Step` line in `[Constraints]`, e.g. `0.5  WEC2_YStep`. Available keys: `RadiusStep`, `DraftStep`, `WEC1_XStep`, `WEC2_XStep`, `WEC2_YStep`, `WEC3_XStep`, `WEC3_YStep`. Each step must be `> 0` and `<= Max - Min`; if `Max - Min` is not a multiple of the step, a warning shows the actual reachable maximum.
 >
+> **WAMIT speed/accuracy options** (`[WAMIT Settings]`). `MeshPanels` sets the panels per body (quarter model); `Solver` selects the linear solver (default `0`, iterative: same results as the direct solver `1`, faster for larger runs; a warning lists frequencies where it hit the iteration limit); `OmegaMax` sets the upper end of the frequency grid (0.5 rad/s upward in 0.05 steps, default 3.0). Lowering `OmegaMax` speeds up each run, but small, shallow WECs resonate at high frequency, so keep 3.0 if the search range includes them (a warning is issued when the response is not negligible at the highest frequency). The uniform 0.05 grid can also under-resolve a narrow resonance peak; compare against a finer grid when accuracy matters.
+>
 > `Draft` is the length of the **cylindrical part only**. A hemispherical bottom of radius `R` is attached below it, so the total draft is `Draft + Radius`.
 
 ### 3. Run Optimization

@@ -1,7 +1,12 @@
+import warnings
+
 import numpy as np
 from scipy.integrate import simpson
 
 from src.physics.wave_spectrum import get_jonswap_spectrum
+
+# 주파수 격자의 마지막 점에서 발전 밀도가 최대값의 이 비율을 넘으면 상한이 응답을 자른 것으로 봅니다.
+TRUNCATION_WARN_RATIO = 0.05
 
 
 def calculate_power(rao_results, config):
@@ -36,5 +41,12 @@ def calculate_power(rao_results, config):
 
         individual_powers.append(wec_power)
         total_power += wec_power
+
+        if power_density.max() > 0 and power_density[-1] > TRUNCATION_WARN_RATIO * power_density.max():
+            warnings.warn(
+                "Power density is not negligible at the highest WAMIT frequency; OmegaMax may truncate the "
+                "response (small or shallow bodies resonate at high frequency). Consider a larger OmegaMax.",
+                stacklevel=2,
+            )
 
     return total_power, individual_powers

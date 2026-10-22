@@ -39,6 +39,8 @@ def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_d
         "ram": wamit_data["RAMGBMAX"],
         "wamit_exe": wamit_data.get("WAMITPath"),
         "mesh_panels": wamit_data.get("MeshPanels"),
+        "solver": wamit_data.get("Solver"),
+        "omega_max": wamit_data.get("OmegaMax"),
         "wave_spec": wave_spec,
     }
 

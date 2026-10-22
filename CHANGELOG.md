@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-21 — WAMIT 반복 솔버와 주파수 상한 설정
+보고서: [docs/reports/2026-10-21_10_wamit-solver-and-omega-max.md](docs/reports/2026-10-21_10_wamit-solver-and-omega-max.md)
+
+#### Added
+- `config.cfg`의 `Solver`(WAMIT `ISOLVE`)와 `OmegaMax`(주파수 격자 상한, 기본 3.0). 반복 솔버가 `MAXITT`에 도달한 주파수 경고, 주파수 상한이 응답을 자른 경우의 경고. 테스트 21건.
+
+#### Changed
+- 기본 솔버를 직접(`ISOLVE=1`)에서 반복(`ISOLVE=0`)으로 변경. 같은 결과를 5기 전체 405 패널에서 1.45배, 1,025 패널에서 약 2.7배 빠르게 계산.
+
 ### 2026-10-21 — 패널 수를 직접 지정하는 개선 메쉬
 보고서: [docs/reports/2026-10-21_09_direct-panel-mesh.md](docs/reports/2026-10-21_09_direct-panel-mesh.md)
 
