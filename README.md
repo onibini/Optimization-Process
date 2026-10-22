@@ -35,6 +35,8 @@ This repository contains Python-based optimization tools designed to optimize th
 │   ├── problems/          # Optimization modes configurations and evaluations
 │   ├── physics/           # WAMIT integration, mesh generation, power calculations
 │   └── utils/             # Config parser, data loaders, geometric checks, and coordinate mappers
+├── scripts/               # Remote compute helpers (remote.ps1: send job to compute PC over SSH, fetch results)
+├── results/               # Fetched remote results + summary.csv (created by scripts, ignored in Git)
 ├── tests/                 # Unit / regression tests (no WAMIT required)
 ├── logs/                  # Optimization histories (created at run time, ignored in Git)
 └── workspace/             # WAMIT inputs/outputs (created at run time, ignored in Git)
@@ -80,6 +82,14 @@ Run the main script:
 python main.py
 ```
 Optimization progress is printed to the terminal (`Hits` = cache hits, `WAMIT` = actual WAMIT runs, `Penalty` = infeasible designs rejected without WAMIT). When the run ends, the best design (vector, radius, draft, body coordinates) is printed.
+
+### 3-1. Run on a separate compute PC (optional)
+Send the job from this PC to the compute PC over SSH and fetch the results automatically:
+```powershell
+.\scripts\remote.ps1 submit -Name site3 -Wait   # upload code + config, run, wait, fetch to results\<job id>\
+.\scripts\remote.ps1 status | tail | stop | fetch | list
+```
+One-time setup (Tailscale + OpenSSH) is in [docs/remote_compute.md](docs/remote_compute.md). `results/summary.csv` collects one row per run.
 
 ### 4. Output Logs
 Each run writes four files to `logs/` with a unique prefix `{SiteName}_{algorithm}_{YYYYmmdd_HHMMSS}`, so runs never overwrite each other:

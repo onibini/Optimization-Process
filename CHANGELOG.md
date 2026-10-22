@@ -5,6 +5,17 @@
 
 ## [Unreleased]
 
+### 2026-10-22 — 계산용 PC 원격 실행·결과 자동 회수
+보고서: [docs/reports/2026-10-22_03_remote-compute.md](docs/reports/2026-10-22_03_remote-compute.md)
+
+#### Added
+- `scripts/remote.ps1`(submit/status/tail/fetch/stop/list)와 `scripts/remote/job_ctl.ps1`: Tailscale + OpenSSH로 계산용 PC에 작업을 보내고 SSH와 분리해 실행, 결과를 `results/<작업ID>/`로 자동 회수.
+- `src/utils/run_summary.py`, `scripts/summarize_results.py`: 실행별 `results/summary.csv` 생성. 테스트 3건.
+- `docs/remote_compute.md`(설정·사용법), `.gitignore`에 `results/`, `scripts/remote.local.psd1`.
+
+#### Verified
+- 실제 두 PC(Tailscale + OpenSSH)에서 짧은 시험 실행으로 보내기→실행→회수→`summary.csv`까지 통과. 설정 중 겪은 문제 해결은 `docs/remote_compute.md`에 정리.
+
 ### 2026-10-22 — 쉬운 설명 리포트 폴더(report/) 추가
 보고서: [docs/reports/2026-10-22_02_easy-report-folder.md](docs/reports/2026-10-22_02_easy-report-folder.md)
 

@@ -24,6 +24,8 @@
 ├── data/                      # 입력 데이터 (env_data.csv)
 ├── docs/                      # 설계 문서 + reports/ (업데이트 보고서)
 ├── report/                    # 쉬운 말 설명 리포트 (초등학생도 이해할 수 있게, 변경마다 추가)
+├── scripts/                   # remote.ps1 (원격 계산 보내기/가져오기), summarize_results.py
+├── results/                   # 계산용 PC에서 가져온 결과 + summary.csv (gitignore)
 ├── src/                       # algorithms / problems / physics / utils
 ├── tests/                     # unittest, WAMIT 없이 실행 가능해야 함
 ├── logs/                      # 실행 결과 (gitignore)
