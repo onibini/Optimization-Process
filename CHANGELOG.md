@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-22 — MeshPanels 기본값 120으로 상향 및 5기 수렴 결과 정정
+보고서: [docs/reports/2026-10-22_01_mesh-panels-default-120.md](docs/reports/2026-10-22_01_mesh-panels-default-120.md)
+
+#### Changed
+- `MeshPanels` 기본값 80 → 120. 5기 수렴 테스트(설계 5가지 x 배치 2가지, 개별 WEC 파워 포함)에서 80패널이 총 파워 최대 11%, 개별 WEC 최대 18% 틀려서 상향. 5기 평가 시간 약 6초 → 약 12초. `wec.gdf` 입력이 바뀌므로 이전과 직접 비교 불가.
+
+#### Fixed (documentation)
+- 보고서 09, 10, `config.cfg`, README에서 80패널이 5기에서 "총 파워 약 1% 이내, 단조 수렴"이라는 서술을 정정.
+
 ### 2026-10-21 — WAMIT 반복 솔버와 주파수 상한 설정
 보고서: [docs/reports/2026-10-21_10_wamit-solver-and-omega-max.md](docs/reports/2026-10-21_10_wamit-solver-and-omega-max.md)
 
@@ -18,10 +27,10 @@
 보고서: [docs/reports/2026-10-21_09_direct-panel-mesh.md](docs/reports/2026-10-21_09_direct-panel-mesh.md)
 
 #### Added
-- `config.cfg`의 `MeshPanels`(기당 1/4 모델 목표 패널 수, 기본 80). `MeshPanels × 기수`가 1,000을 넘으면 메모리 경고. 테스트 16건.
+- `config.cfg`의 `MeshPanels`(기당 1/4 모델 목표 패널 수, 도입 당시 기본 80 → 2026-10-22 120으로 상향). `MeshPanels × 기수`가 1,000을 넘으면 메모리 경고. 테스트 16건.
 
 #### Changed
-- 원통+반구 메쉬를 큐브드스피어 반구 + 원통 사각형으로 재작성하고 GDF를 직접 씀. 극점 팬이 사라지고 패널이 균일해지며 같은 패널 수에서 1기 오차가 약 절반, 5기 수렴이 단조. 기본 설정에서 5기 평가가 32초 → 약 8초.
+- 원통+반구 메쉬를 큐브드스피어 반구 + 원통 사각형으로 재작성하고 GDF를 직접 씀. 극점 팬이 사라지고 패널이 균일해지며 같은 패널 수에서 1기 오차가 약 절반, 5기 수렴이 단조(R=2.5, D=5.0 한 가지 기준이며 80패널은 일부 형상에서 부정확해 아래 2026-10-22 항목에서 정정). 80패널 기준 5기 평가 32초 → 약 8초.
 
 #### Removed
 - `max_elements` 기반 메쉬 크기 계산, 프로파일·회전·gmsh 코드와 `gmsh` 의존성.

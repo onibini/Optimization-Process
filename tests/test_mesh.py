@@ -40,13 +40,26 @@ class TestChooseGrid(unittest.TestCase):
 
     def test_actual_count_is_close_to_target(self):
         for radius, draft in SHAPES:
-            for target in (40, 80, 150, 250):
+            for target in (40, 80, 120, 150, 250):
                 n, nz = choose_grid(radius, draft, target)
                 self.assertLessEqual(abs(count_panels(n, nz) - target) / target, 0.25, (radius, draft, target))
 
     def test_more_target_panels_never_gives_fewer(self):
         counts = [count_panels(*choose_grid(1.5, 2.5, t)) for t in (30, 60, 120, 240, 480)]
         self.assertEqual(counts, sorted(counts))
+
+
+class TestDefaultPanelCount(unittest.TestCase):
+    def test_default_is_120_from_the_convergence_test(self):
+        # 80은 일부 형상에서 총 파워 최대 11%, 개별 WEC 최대 18% 틀려서 120으로 정함 (docs/reports/2026-10-22_01_*.md)
+        self.assertEqual(DEFAULT_QUARTER_PANELS, 120)
+
+    def test_default_five_bodies_stay_below_memory_guideline_for_all_shapes(self):
+        for radius, draft in SHAPES:
+            n, nz = choose_grid(radius, draft, DEFAULT_QUARTER_PANELS)
+            panels = count_panels(n, nz)
+            self.assertLessEqual(abs(panels - DEFAULT_QUARTER_PANELS) / DEFAULT_QUARTER_PANELS, 0.25, (radius, draft))
+            self.assertLessEqual(5 * panels, PANEL_MEMORY_WARN, (radius, draft))
 
 
 class TestMeshGeometry(unittest.TestCase):

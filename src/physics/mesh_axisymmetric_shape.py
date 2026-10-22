@@ -16,7 +16,9 @@ GDF 헤더에 ISX = ISY = 1을 기록하므로 WAMIT이 나머지 3/4를 대칭�
 
 import numpy as np
 
-DEFAULT_QUARTER_PANELS = 80  # 5기 배치 기준 전체 패널 약 400개 (평가 약 5~10초)
+# 5기 배치 기준 전체 패널 약 600개, 평가 약 12초. 80은 일부 형상(가늘고 긴 형상, 넓고 얕은 형상, 촘촘한 배치)에서
+# 총 파워 최대 11%, 개별 WEC 최대 18% 틀려서 120으로 정했습니다 (docs/reports/2026-10-22_01_mesh-panels-default-120.md).
+DEFAULT_QUARTER_PANELS = 120
 MIN_QUARTER_PANELS = 12  # n = 1이 만들 수 있는 가장 작은 격자 근처
 _MAX_N = 60  # 후보 탐색 상한 (1/4 패널 약 11,000개 이상)
 _ASPECT_WEIGHT = 0.15  # 원통 패널이 정사각형에서 벗어나는 정도에 대한 벌점 가중치
