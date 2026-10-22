@@ -29,6 +29,7 @@ This repository contains Python-based optimization tools designed to optimize th
 ├── data/
 │   └── env_data.csv       # Ocean environment wave spectrum parameters by site
 ├── docs/                  # Design documents and per-update reports (docs/reports/)
+├── report/                # Plain-language (kid-friendly, Korean) explanation of every change
 ├── src/
 │   ├── algorithms/        # Optimization engines (DE, PSO, GA, CMA-ES)
 │   ├── problems/          # Optimization modes configurations and evaluations

@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-22 — 쉬운 설명 리포트 폴더(report/) 추가
+보고서: [docs/reports/2026-10-22_02_easy-report-folder.md](docs/reports/2026-10-22_02_easy-report-folder.md)
+
+#### Added
+- `report/`: 변경 내용을 초등학생도 이해할 수 있게 설명하는 글(처음 글: 처음부터 지금까지의 변경 전체, 이전 대비 새 메쉬 비교 포함)과 목차. `CLAUDE.md` 3-1절에 변경마다 작성하는 규칙 추가.
+
 ### 2026-10-22 — MeshPanels 기본값 120으로 상향 및 5기 수렴 결과 정정
 보고서: [docs/reports/2026-10-22_01_mesh-panels-default-120.md](docs/reports/2026-10-22_01_mesh-panels-default-120.md)
 
