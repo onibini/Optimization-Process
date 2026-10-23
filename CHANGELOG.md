@@ -5,6 +5,25 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — CMA-ES 변수별 최소 탐색 폭 시험과 3개 해역 재제출
+보고서: [docs/reports/2026-10-23_13_cmaes-minstd-and-rerun.md](docs/reports/2026-10-23_13_cmaes-minstd-and-rerun.md)
+
+#### Added
+- `src/algorithms/cma_es.py`: `raise_min_std`, `min_std_factor`(기본 0, 끔; 시험 결과 효과 없음). `algorithm_benchmark.py --grid 0`(WEC 문제의 변수별 격자). 계산용 PC 작업 `20261023_190757_cmaes_sites2`(수정된 CMA-ES로 재제출).
+
+### 2026-10-23 — CMA-ES 보폭 상한과 넘침 방지
+보고서: [docs/reports/2026-10-23_12_cmaes-sigma-cap.md](docs/reports/2026-10-23_12_cmaes-sigma-cap.md)
+
+#### Fixed
+- `src/algorithms/cma_es.py`: 보폭 갱신의 한 세대 로그 변화량을 1.0 이하로, 보폭을 [격자 한 칸, 1.0]으로 제한(`update_sigma`, exp overflow 방지). `SigmaInit`은 (0, 1]만 허용. `tests/test_cma_es_sigma.py`(5건).
+
+### 2026-10-23 — DEPSO 추가와 최적화 알고리즘 벤치마크
+보고서: [docs/reports/2026-10-23_11_depso-and-optimizer-benchmark.md](docs/reports/2026-10-23_11_depso-and-optimizer-benchmark.md)
+
+#### Added
+- `src/algorithms/depso.py` (`Algorithm=5`, F·CR·w·c1·c2): 사용자의 DEPSO(Lee, Heo, Koo, 2026, Ocean Engineering 355, 125173) 갱신 규칙(PSO 이동점을 기준으로 DE 교차, 탐욕 선택). 비교용 `update="pbest"`, `"move"`. `tests/test_depso.py`.
+- `scripts/experiments/algorithm_benchmark.py`: 프로젝트 최적화기를 같은 평가 횟수로 벤치마크 함수에서 비교(병렬, 그림). 결과: 평균 순위 CMA-ES 2.67, DE 2.75, PSO 3.33, DEPSO 3.42, GA 4.42; DEPSO는 원래 규칙이 변형(pbest, move)보다 좋음.
+
 ### 2026-10-23 — DE 교체 방식(즉시 교체 대 세대 단위) 벤치마크
 보고서: [docs/reports/2026-10-23_10_de-update-rule-benchmark.md](docs/reports/2026-10-23_10_de-update-rule-benchmark.md)
 

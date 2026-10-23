@@ -13,7 +13,37 @@ def _denormalize_vector(vector, lower_bounds, bounds_range):
     return lower_bounds + vector * bounds_range
 
 
-def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
+# 보폭 sigma의 상한(정규화 공간 [0, 1]에서). 샘플은 [0, 1]로 잘리므로 범위 전체(1.0)보다 큰 보폭은 의미가 없습니다.
+MAX_SIGMA = 1.0
+# 좌표별 최소 표준편차 = MIN_STD_FACTOR x (격자 한 칸 / 범위). 0이면 끔.
+MIN_STD_FACTOR = 0.0
+# 한 세대의 보폭 변화량 상한: sigma *= exp(min(MAX_LOG_SIGMA_CHANGE, ...)). pycma와 같은 방식으로,
+# 보폭이 격자 하한에 묶여 진화 경로 ps가 커져도 exp가 넘치지(overflow) 않게 합니다.
+MAX_LOG_SIGMA_CHANGE = 1.0
+
+
+def update_sigma(sigma, ps_norm, cs, damps, echi, min_sigma, max_sigma=MAX_SIGMA):
+    """CSA 보폭 갱신. 변화량(로그)을 MAX_LOG_SIGMA_CHANGE 이하로, 결과를 [min_sigma, max_sigma]로 제한합니다."""
+    log_change = min((cs / damps) * (ps_norm / echi - 1), MAX_LOG_SIGMA_CHANGE)
+    return float(np.clip(sigma * np.exp(log_change), min_sigma, max_sigma))
+
+
+def raise_min_std(C, sigma, min_std):
+    """좌표별 표준편차 sigma * sqrt(C_ii)가 min_std보다 작으면 그 대각 성분만 키웁니다(양의 정부호 유지).
+
+    격자 간격이 변수마다 다르면(정규화 공간에서 R 한 칸 0.05, y 한 칸 0.0033) 수렴 후반에 큰 칸을 가진 변수의 샘플이
+    늘 같은 격자점으로 반올림되어 그 방향 탐색이 멈춥니다. pycma의 'minstd'(정수 변수 처리)와 같은 방식입니다.
+    """
+    floor = (np.asarray(min_std, dtype=float) / sigma) ** 2
+    diag = np.diag(C)
+    low = diag < floor
+    if np.any(low):
+        C = C.copy()
+        C[low, low] = floor[low]
+    return C
+
+
+def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3, min_std_factor=MIN_STD_FACTOR):
     """
     CMA-ES (Covariance Matrix Adaptation Evolution Strategy) 메인 엔진
     - 이산 격자(StepSize) 및 메모이제이션 통합 버전
@@ -26,9 +56,12 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
         5기 배치에서 샘플과 갱신 벡터의 대응이 깨지고 분포가 왜곡될 수 있었습니다.)
 
     :param sigma_init: 초기 탐색 보폭 (전체 탐색 범위 대비 비율, 기본 30%)
+    :param min_std_factor: 좌표별 최소 표준편차(격자 한 칸 대비 배수, 0이면 끔). ``raise_min_std`` 참조
     """
     if pop_size < 4:
         raise ValueError("CMA-ES requires PopSize >= 4.")
+    if not 0 < sigma_init <= MAX_SIGMA:
+        raise ValueError(f"SigmaInit must be in (0, {MAX_SIGMA:g}] (fraction of the search range), got {sigma_init}")
 
     dimensions = config["dimensions"]
     lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
@@ -63,6 +96,7 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
     m = np.random.rand(N)  # 초기 평균 ([0, 1] 정규화 공간)
     sigma = float(sigma_init)  # 초기 탐색 보폭 (정규화 공간 비율)
     min_sigma = np.min(step_size / bounds_range)
+    min_std = min_std_factor * step_size / bounds_range  # 좌표별 최소 표준편차 (정규화 공간)
 
     pc = np.zeros(N)  # 공분산 진화 경로
     ps = np.zeros(N)  # 보폭 진화 경로
@@ -122,12 +156,13 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3):
                 + cmu * artmp.T @ np.diag(weights) @ artmp
             )
 
-            # 6. 보폭 sigma 업데이트 (격자 한 칸보다 작아지지 않도록 하한)
-            sigma = sigma * np.exp((cs / damps) * (np.linalg.norm(ps) / echi - 1))
-            sigma = max(sigma, min_sigma)
+            # 6. 보폭 sigma 업데이트 (하한: 격자 한 칸, 상한: 범위 전체, 한 세대 변화량 제한)
+            sigma = update_sigma(sigma, np.linalg.norm(ps), cs, damps, echi, min_sigma)
 
             # 7. 고유값 분해로 B, D, invsqrtC 갱신
             C = (C + C.T) / 2
+            if min_std_factor > 0:
+                C = raise_min_std(C, sigma, min_std)
             D_eig, B = np.linalg.eigh(C)
             D_eig = np.maximum(D_eig, 1e-18)
             D = np.sqrt(D_eig)

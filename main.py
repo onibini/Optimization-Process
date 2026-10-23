@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from src.algorithms import run_cma_es, run_de, run_ga, run_pso
+from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
 from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, MIN_QUARTER_PANELS
 from src.physics.wamit_handler import (
     DEFAULT_OMEGA_MAX,
@@ -170,6 +170,19 @@ def main(cfg_path="config.cfg"):
             pop_size=pop_size,
             max_iter=max_iter,
             sigma_init=float(algo_settings.get("SigmaInit", 0.3)),
+        )
+    elif algo_type == 5:
+        print("Algorithm: [DEPSO (DE + PSO)]")
+        best_x, best_f = run_depso(
+            config=problem_config,
+            eval_func=eval_func,
+            pop_size=pop_size,
+            max_iter=max_iter,
+            F=float(algo_settings["F"]),
+            CR=float(algo_settings["CR"]),
+            w=float(algo_settings["w"]),
+            c1=float(algo_settings["c1"]),
+            c2=float(algo_settings["c2"]),
         )
     else:
         print("Error: Invalid Algorithm type in config file.")

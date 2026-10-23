@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.algorithms import run_cma_es, run_de, run_ga, run_pso
+from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
 from src.algorithms.common import CachedEvaluator, OptimizationLogger
 from src.physics.wamit_handler import WamitRunError, run_wamit
 from src.utils import PENALTY_FACTOR, check_min_distance, decode_symmetric_positions, penalty_result
@@ -118,7 +118,8 @@ class TestLogger(InTempDir):
             run_pso(LAYOUT5, dummy_layout_eval, pop_size=8, max_iter=3)
             run_ga(LAYOUT5, dummy_layout_eval, pop_size=8, max_iter=3)
             run_cma_es(LAYOUT5, dummy_layout_eval, pop_size=8, max_iter=3)
-        for algo in ("de", "pso", "ga", "cmaes"):
+            run_depso(LAYOUT5, dummy_layout_eval, pop_size=8, max_iter=3)
+        for algo in ("de", "pso", "ga", "cmaes", "depso"):
             summaries = glob.glob(f"logs/Dummy_{algo}_*_summary.json")
             self.assertEqual(len(summaries), 1, algo)
             with open(summaries[0]) as f:
@@ -183,6 +184,7 @@ class TestCanonicalConsistency(InTempDir):
             ("pso", run_pso, {}),
             ("ga", run_ga, {}),
             ("cmaes", run_cma_es, {}),
+            ("depso", run_depso, {"F": 0.5, "CR": 0.9}),
         ]:
             np.random.seed(42)
             with redirect_stdout(io.StringIO()):

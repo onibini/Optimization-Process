@@ -50,7 +50,7 @@ The result carries `info = {"penalized": True}`, so penalty evaluations are logg
 
 ## 3. Optimization Algorithms
 
-The system implements four distinct optimization engines. All engines use the shared `CachedEvaluator` to quantize vectors to the configured `StepSize`, canonicalize symmetric layouts, and query a grid-indexed in-memory cache before running the expensive physics evaluation. DE, GA and CMA-ES require `PopSize >= 4`.
+The system implements five optimization engines. All engines use the shared `CachedEvaluator` to quantize vectors to the configured `StepSize`, canonicalize symmetric layouts, and query a grid-indexed in-memory cache before running the expensive physics evaluation. DE, GA, CMA-ES and DEPSO require `PopSize >= 4`.
 
 ### 1. Differential Evolution (DE)
 - **Strategy**: `DE/rand/1/bin`
@@ -72,3 +72,11 @@ The system implements four distinct optimization engines. All engines use the sh
 - **Normalized Search Space**: The distribution mean, covariance matrix, and global step size are adapted in a dimensionless `[0, 1]` coordinate system. Each sampled normalized vector is converted back to the configured physical bounds before quantization and evaluation. This prevents variables with large numeric ranges from dominating the covariance adaptation.
 - **Grid Integration**: Offspring are sampled from the continuous distribution and clipped to `[0, 1]`. A copy is quantized to the `StepSize` grid and canonicalized for evaluation, while the mean/covariance/evolution-path updates use the clipped **continuous** samples. This keeps the update consistent with what was sampled (canonicalization may swap WEC2/WEC3 in 5-WEC layouts). The search step size is not allowed to shrink below one grid step.
 - **Parameters**: `SigmaInit` (initial search step ratio).
+
+### 5. DEPSO (DE + PSO hybrid)
+- **Source**: the author's DEPSO (Lee, Heo, Koo, 2026, *Ocean Engineering* 355, 125173); only its update rule is ported, everything else uses the shared project functions.
+- **Per particle and generation**: (1) PSO move: velocity update $ec{v}_i \leftarrow wec{v}_i + c_1 r_1 (ec{p}_i - ec{x}_i) + c_2 r_2 (ec{g} - ec{x}_i)$, clipped to 10% of the range, moved point $ec{m}_i = ec{x}_i + ec{v}_i$; (2) DE mutation $ec{x}_{r_1} + F(ec{x}_{r_2} - ec{x}_{r_3})$ from the current positions of three other particles; (3) binomial crossover with the **moved point** as the base vector; (4) one evaluation and greedy selection: the particle moves only if the trial is better, then `pbest`/`gbest` are updated. The velocity keeps its update either way. Updates are immediate within a generation, as in DE.
+- Because positions only change when they improve, `pbest` always equals the current position and the $c_1$ term is effectively zero; the greedy selection keeps an elitist population, which the DE mutation needs to converge.
+- **Comparison variants** (`update` argument, not in `config.cfg`): `"pbest"` (mutation from personal bests, particles always move) and `"move"` (particles always move like PSO). In the benchmark of `docs/reports/2026-10-23_11_*` both were worse than the default; `"move"` did not converge.
+- **Canonicalization**: evaluated through a canonicalized copy, like PSO.
+- **Parameters**: `F`, `CR`, `w`, `c1`, `c2`.

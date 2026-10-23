@@ -34,7 +34,8 @@ This project is a scientific optimization framework written in Python. It optimi
 │   │   ├── de.py              # Differential Evolution (DE/rand/1/bin)
 │   │   ├── pso.py             # Particle Swarm Optimization (PSO)
 │   │   ├── ga.py              # Genetic Algorithm (GA)
-│   │   └── cma_es.py          # Covariance Matrix Adaptation Evolution Strategy (CMA-ES)
+│   │   ├── cma_es.py          # Covariance Matrix Adaptation Evolution Strategy (CMA-ES)
+│   │   └── depso.py           # DE + PSO hybrid (DEPSO)
 │   │
 │   ├── problems/              # Optimization problem configurations & evaluation functions
 │   │   ├── shape_opt.py       # Geometry optimization (Single WEC radius & draft)

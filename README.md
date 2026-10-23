@@ -3,7 +3,7 @@
 This repository contains Python-based optimization tools designed to optimize the geometry (shape) and spatial layout of Wave Energy Converters (WECs) in an array using various metaheuristic algorithms. Hydrodynamic coefficients and interactions are calculated using **WAMIT**.
 
 ## Key Features
-- **Multi-Algorithm Support**: Includes Differential Evolution (DE), Particle Swarm Optimization (PSO), Genetic Algorithm (GA), and CMA-ES.
+- **Multi-Algorithm Support**: Includes Differential Evolution (DE), Particle Swarm Optimization (PSO), Genetic Algorithm (GA), CMA-ES, and DEPSO (DE + PSO hybrid).
 - **Symmetric Layout Mapping**: Employs coordinate canonicalization and mapping to eliminate geometric redundancy (symmetric placements) and drastically improve optimization convergence.
 - **Evaluation Cache (Memory Function)**: Caches evaluation results to prevent redundant WAMIT hydrodynamic simulation runs.
 - **Flexible Modes**:
@@ -31,7 +31,7 @@ This repository contains Python-based optimization tools designed to optimize th
 ├── docs/                  # Design documents and per-update reports (docs/reports/)
 ├── report/                # Plain-language (kid-friendly, Korean) explanation of every change
 ├── src/
-│   ├── algorithms/        # Optimization engines (DE, PSO, GA, CMA-ES)
+│   ├── algorithms/        # Optimization engines (DE, PSO, GA, CMA-ES, DEPSO)
 │   ├── problems/          # Optimization modes configurations and evaluations
 │   ├── physics/           # WAMIT integration, mesh generation, power calculations
 │   └── utils/             # Config parser, data loaders, geometric checks, and coordinate mappers
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 ### 2. Configure Optimization
 Edit the [config.cfg](config.cfg) file to adjust the simulation parameters. Each line is `value  name  - comment`. You can change:
 - **Optimization Mode** (`OptMode`): 1 (Geometry), 2 (Layout), 3 (Both)
-- **Algorithm** (`Algorithm`): 1 (DE), 2 (PSO), 3 (GA), 4 (CMA-ES)
+- **Algorithm** (`Algorithm`): 1 (DE), 2 (PSO), 3 (GA), 4 (CMA-ES), 5 (DEPSO: uses F, CR, w, c1, c2)
 - **WEC Count** (`NumWECs`): 1, 3, or 5
 - **WEC Parameters** & boundary constraints.
 
@@ -102,7 +102,7 @@ Each run writes four files to `logs/` with a unique prefix `{SiteName}_{algorith
 | `*_generation_history.csv` | Best-so-far design per generation and elapsed time |
 | `*_summary.json` | Final best design, generations completed, WAMIT/penalty/cache counts (also written if the run is interrupted) |
 
-`algorithm` is one of `de`, `pso`, `ga`, `cmaes`.
+`algorithm` is one of `de`, `pso`, `ga`, `cmaes`, `depso`.
 
 ---
 
