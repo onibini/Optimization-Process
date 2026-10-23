@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — CMA-ES 설정 시험과 3개 해역 동시최적화 제출
+보고서: [docs/reports/2026-10-23_09_cmaes-tuning-and-run.md](docs/reports/2026-10-23_09_cmaes-tuning-and-run.md)
+
+#### Added
+- `scripts/experiments/run_sites.py`: 한 작업에서 여러 해역을 순서대로 `main.main`으로 실행. `tests/test_run_sites.py`(3건).
+- 가짜 목적함수 시험 결과 CMA-ES 개체 수 72, σ0 0.3 선택(표준 9는 국소해에 갇힘). 계산용 PC 작업 `20261023_161543_cmaes_sites` 제출(ITTC, 72 × 300).
+
 ### 2026-10-23 — 영일만항 수심 33 m 결과를 검증 기준에서 제거
 보고서: [docs/reports/2026-10-23_08_remove-yeongil-33m.md](docs/reports/2026-10-23_08_remove-yeongil-33m.md)
 
