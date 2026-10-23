@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 사용 설명서를 일반 사용자용으로 다시 쓰기
+보고서: [docs/reports/2026-10-23_20_general-manual.md](docs/reports/2026-10-23_20_general-manual.md)
+
+#### Changed
+- `docs/manual_ko.md`: 작성자 전용 내용(계산용 PC 원격 실행 절차, 논문 번호 대응, 논문 비교 설정)을 빼고 계산 과정, 변수·번호 규칙, 설치, 해역 추가, 범용 팁을 보강. README의 원격 실행 표현을 선택 사항으로.
+
 ### 2026-10-23 — GitHub 메인 페이지(README) 개편과 사용 설명서
 보고서: [docs/reports/2026-10-23_19_readme-and-manual.md](docs/reports/2026-10-23_19_readme-and-manual.md)
 

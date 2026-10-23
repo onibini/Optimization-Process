@@ -30,7 +30,7 @@ Five heaving buoys in front of a breakwater interact with each other and with th
 | **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver, automatic cubed-sphere hemisphere + cylinder mesh |
 | **Power model** | Coupled heave RAOs of all bodies, linear PTO damping tuned to the heave resonance, JONSWAP (ITTC / Goda) or Pierson-Moskowitz spectrum |
 | **Search space** | Symmetric layouts on a 0.1 m grid; canonical ordering removes duplicate layouts; an evaluation cache never runs WAMIT twice for the same design |
-| **Speed options** | Adaptive frequency grid around the resonance (`FreqGrid`), several WAMIT processes at the same time (`Workers`), remote runs on a compute PC over SSH |
+| **Speed options** | Adaptive frequency grid around the resonance (`FreqGrid`), several WAMIT processes at the same time (`Workers`), optional remote runs on another Windows PC over SSH |
 | **Validation** | Re-evaluates the published optimal designs and keeps a regression reference ([docs/validation](docs/validation/README.md)); 200+ unit tests run without WAMIT |
 
 ## How it works
@@ -111,7 +111,7 @@ Details and the regression reference: [docs/validation](docs/validation/README.m
 │   ├── problems/               # geometry, layout and joint problems
 │   ├── physics/                # WAMIT I/O, mesh, RAO, wave spectra, power
 │   └── utils/                  # config parser, validation, symmetric layout mapping
-├── scripts/                    # remote runs on a compute PC (remote.ps1) and experiments
+├── scripts/                    # experiments, benchmarks and optional remote runs (remote.ps1)
 ├── tests/                      # unit tests (no WAMIT needed)
 ├── docs/                       # manual, design notes, validation, update reports with figures
 └── report/                     # plain-language (Korean) notes for every change
@@ -123,7 +123,7 @@ Run outputs go to `logs/` (per run: config, every evaluated design, best per gen
 
 - [User manual (Korean)](docs/manual_ko.md) — installation, every setting, outputs, remote runs, troubleshooting
 - [Algorithms and problems](docs/algorithms_and_problems.md) · [Architecture](docs/architecture.md) · [Conventions](docs/conventions.md)
-- [Frequency-grid design](docs/frequency_grid_design.md) · [Remote compute](docs/remote_compute.md) · [Validation](docs/validation/README.md)
+- [Frequency-grid design](docs/frequency_grid_design.md) · [Validation](docs/validation/README.md) · [Remote runs over SSH (optional)](docs/remote_compute.md)
 - [Update reports](docs/reports/) and [Changelog](CHANGELOG.md)
 
 ## Development
