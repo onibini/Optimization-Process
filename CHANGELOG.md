@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — DE 교체 방식(즉시 교체 대 세대 단위) 벤치마크
+보고서: [docs/reports/2026-10-23_10_de-update-rule-benchmark.md](docs/reports/2026-10-23_10_de-update-rule-benchmark.md)
+
+#### Added
+- `scripts/experiments/de_update_benchmark.py`: 프로젝트 DE(즉시 교체)와 세대 단위 DE를 벤치마크 함수 6개로 비교(병렬 실행, 그림). `tests/test_de_update_benchmark.py`(5건, 즉시 교체가 `run_de`와 같은지 포함). 결과: 즉시 교체가 11/24 경우 유의하게 좋고 나머지는 차이 없음, 세대 단위는 같은 품질에 약 1.15배 세대 필요.
+- `CLAUDE.md`: 보고서에 가능하면 이미지를 넣는 규칙(`docs/reports/images/`, `report/images/`).
+
 ### 2026-10-23 — CMA-ES 설정 시험과 3개 해역 동시최적화 제출
 보고서: [docs/reports/2026-10-23_09_cmaes-tuning-and-run.md](docs/reports/2026-10-23_09_cmaes-tuning-and-run.md)
 
