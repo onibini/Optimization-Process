@@ -44,6 +44,7 @@ def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_d
         "omega_max": wamit_data.get("OmegaMax"),
         "freq_grid": wamit_data.get("FreqGrid"),
         "workers": wamit_data.get("Workers", 1),
+        "shape": wamit_data.get("Shape", 1),
         "wave_spec": wave_spec,
     }
 

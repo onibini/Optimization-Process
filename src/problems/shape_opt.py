@@ -38,6 +38,7 @@ def get_shape_config(constraints_dict: dict, env_data: dict, wamit_data: dict, w
         "omega_max": wamit_data.get("OmegaMax"),
         "freq_grid": wamit_data.get("FreqGrid"),
         "workers": wamit_data.get("Workers", 1),
+        "shape": wamit_data.get("Shape", 1),
     }
 
 

@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 평평한 바닥 원통 WEC 형상 추가 (Shape)
+보고서: [docs/reports/2026-10-23_21_flat-cylinder-shape.md](docs/reports/2026-10-23_21_flat-cylinder-shape.md)
+
+#### Added
+- `config.cfg [WEC Parameters] Shape`: 1 원통 + 반구(기본), 2 평평한 바닥 원통(설계 변수 R, D; D = 총 흘수). 1/4 모델 메쉬(바닥은 가운데 정사각형 + 둘레 패치), 형상별 공진 주파수 어림(적응형 격자), 메쉬 캐시 구분. `tests/test_cylinder_shape.py`(11건). WAMIT 수렴 확인은 아직.
+
 ### 2026-10-23 — 사용 설명서를 일반 사용자용으로 다시 쓰기
 보고서: [docs/reports/2026-10-23_20_general-manual.md](docs/reports/2026-10-23_20_general-manual.md)
 

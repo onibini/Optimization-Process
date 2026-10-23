@@ -20,14 +20,15 @@
 
 ## Why this project
 
-Five heaving buoys in front of a breakwater interact with each other and with the waves reflected by the wall. The best buoy **shape** depends on the **layout** and the other way round, so optimizing them one after the other misses designs that only a **simultaneous** search finds. This repository searches both at once: radius *R*, cylinder draft *D* and the positions of the WECs, scored by the time-averaged power of the whole array in the irregular sea of a real site.
+Five heaving buoys in front of a breakwater interact with each other and with the waves reflected by the wall. The best buoy **shape** depends on the **layout** and the other way round, so optimizing them one after the other misses designs that only a **simultaneous** search finds. This repository searches both at once: radius *R*, draft *D* and the positions of the WECs, scored by the time-averaged power of the whole array in the irregular sea of a real site.
 
 ## Highlights
 
 | | |
 | :--- | :--- |
 | **Optimizers** | Differential Evolution (default), PSO, GA, CMA-ES and DEPSO (the DE + PSO hybrid of [Lee et al., 2026](#citation)) |
-| **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver, automatic cubed-sphere hemisphere + cylinder mesh |
+| **WEC shapes** | Cylinder with a hemispherical bottom (default) or cylinder with a flat bottom; both described by radius *R* and draft *D* with automatic quarter-model meshes |
+| **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver |
 | **Power model** | Coupled heave RAOs of all bodies, linear PTO damping tuned to the heave resonance, JONSWAP (ITTC / Goda) or Pierson-Moskowitz spectrum |
 | **Search space** | Symmetric layouts on a 0.1 m grid; canonical ordering removes duplicate layouts; an evaluation cache never runs WAMIT twice for the same design |
 | **Speed options** | Adaptive frequency grid around the resonance (`FreqGrid`), several WAMIT processes at the same time (`Workers`), optional remote runs on another Windows PC over SSH |
@@ -76,7 +77,7 @@ Everything is set in [`config.cfg`](config.cfg) (`value  name  - comment` per li
 | `[Simulation]` | `OptMode` | 1 geometry, 2 layout, 3 geometry + layout |
 | | `Algorithm` | 1 DE, 2 PSO, 3 GA, 4 CMA-ES, 5 DEPSO |
 | | `WaveSpec` | 1 JONSWAP ITTC (default), 2 JONSWAP Goda, 3 Pierson-Moskowitz |
-| `[WEC Parameters]` | `NumWECs`, `MinSpacing` | 1, 3 or 5 WECs; minimum centre distance = `MinSpacing` × R (4) |
+| `[WEC Parameters]` | `NumWECs`, `Shape`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; minimum centre distance = `MinSpacing` × R (4) |
 | `[AlgorithmSettings]` | `PopSize`, `MaxIter`, `F`, `CR`, `w`, `c1`, `c2`, `SigmaInit`, `DEUpdate` | population, generations and optimizer parameters |
 | `[Constraints]` | `RadiusMin/Max`, `DraftMin/Max`, `WECn_X/YMin/Max`, `StepSize` | search ranges (all positive) and grid step (0.1 m) |
 | `[Environment]` | `SiteID` | row of [`data/env_data.csv`](data/env_data.csv) (Hs, Tp, γ, depth) |

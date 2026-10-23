@@ -1,14 +1,20 @@
 """
-원통 + 반구 WEC의 WAMIT GDF 패널 메쉬 생성 모듈 (mesh_axisymmetric_shape.py)
+축대칭 WEC의 WAMIT GDF 패널 메쉬 생성 모듈 (mesh_axisymmetric_shape.py)
 
-물에 잠긴 형상(원통 흘수 D, 그 아래 반지름 R의 반구)의 1/4 모델(x >= 0, y >= 0)을 만듭니다.
-GDF 헤더에 ISX = ISY = 1을 기록하므로 WAMIT이 나머지 3/4를 대칭으로 처리합니다.
+물에 잠긴 형상의 1/4 모델(x >= 0, y >= 0)을 만듭니다. GDF 헤더에 ISX = ISY = 1을 기록하므로
+WAMIT이 나머지 3/4를 대칭으로 처리합니다. 형상은 두 가지입니다(``SHAPES``).
 
-메쉬 구성
+1. 원통 + 반구 (기본): 원통 길이 D 아래에 반지름 R의 반구. 총 흘수 D + R.
     - 반구: 큐브드스피어(등각) 3개 패치. 극점에 삼각형 팬이 없어 패널이 거의 균일합니다.
     - 원통: 반구 적도와 같은 각도 분할(2n열)의 사각형 패널.
-    - 1/4 모델 패널 수는 ``3 n^2 + 2 n n_z`` 이며 (n: 반구 분할 수, n_z: 원통 세로 분할 수),
-      ``target_panels``에 가장 가까운 (n, n_z) 조합이 선택됩니다.
+    - 1/4 모델 패널 수는 ``3 n^2 + 2 n n_z`` (n: 반구 분할 수, n_z: 원통 세로 분할 수).
+2. 원통 (평평한 바닥): 반지름 R, 흘수 D. 총 흘수 D.
+    - 옆면: 2n열 x n_z행의 사각형 패널.
+    - 바닥: 1/4 원판을 가운데 정사각형(n x n)과, 그 두 변을 둘레 원호(0~45도, 45~90도, 각 n칸)에 잇는
+      두 패치(각 n x m)로 나눔. 둘레에서 옆면과 같은 2n칸으로 맞물립니다.
+    - 1/4 모델 패널 수는 ``n^2 + 2 n m + 2 n n_z``.
+
+``target_panels``에 가장 가까운 분할이 선택됩니다.
 
 32-bit WAMIT은 (기수 x 기당 패널 수)에 비례하는 메모리 한계가 있고 평가 시간도 패널 수의 약 2.5~3제곱으로
 늘어나므로, 패널 수를 직접 지정할 수 있어야 합니다.
@@ -22,6 +28,33 @@ DEFAULT_QUARTER_PANELS = 120
 MIN_QUARTER_PANELS = 12  # n = 1이 만들 수 있는 가장 작은 격자 근처
 _MAX_N = 60  # 후보 탐색 상한 (1/4 패널 약 11,000개 이상)
 _ASPECT_WEIGHT = 0.15  # 원통 패널이 정사각형에서 벗어나는 정도에 대한 벌점 가중치
+_CORE_FRACTION = 0.55  # 평평한 바닥: 가운데 정사각형의 한 변 / R
+
+# 형상 번호 (config.cfg [WEC Parameters] Shape)
+SHAPE_CYLINDER_HEMISPHERE = 1
+SHAPE_CYLINDER = 2
+SHAPES = {SHAPE_CYLINDER_HEMISPHERE: "cylinder + hemisphere", SHAPE_CYLINDER: "cylinder (flat bottom)"}
+DEFAULT_SHAPE = SHAPE_CYLINDER_HEMISPHERE
+
+
+def check_shape(shape):
+    """Shape 값을 검증합니다 (1 원통 + 반구, 2 원통)."""
+    if isinstance(shape, bool) or shape not in SHAPES:
+        raise ValueError(f"Shape must be one of {sorted(SHAPES)} ({SHAPES}), got {shape!r}")
+    return shape
+
+
+def total_draft(shape, radius, draft):
+    """총 흘수: 원통 + 반구는 D + R, 원통은 D."""
+    return draft + radius if check_shape(shape) == SHAPE_CYLINDER_HEMISPHERE else draft
+
+
+def displaced_volume(shape, radius, draft):
+    """잠긴 부피(몸체 전체): 원통 + 반구 pi R^2 D + 2/3 pi R^3, 원통 pi R^2 D."""
+    volume = np.pi * radius**2 * draft
+    if check_shape(shape) == SHAPE_CYLINDER_HEMISPHERE:
+        volume += 2.0 / 3.0 * np.pi * radius**3
+    return float(volume)
 
 
 def choose_grid(radius, draft_cylinder, target_panels):
@@ -97,10 +130,93 @@ def build_panels(radius, draft_cylinder, n, nz):
     return panels
 
 
-def write_gdf(output_path, panels, gravity=9.80665):
+def _bottom_rim_layers(n):
+    """평평한 바닥에서 가운데 정사각형과 둘레 사이의 층 수 m (패널이 정사각형에 가깝게)."""
+    return max(1, round((1.0 - _CORE_FRACTION) * 4 * n / np.pi))
+
+
+def count_cylinder_panels(n, nz):
+    """평평한 바닥 원통 1/4 모델의 패널 수 (바닥 n^2 + 2 n m, 옆면 2 n n_z)."""
+    return n * n + 2 * n * _bottom_rim_layers(n) + 2 * n * nz
+
+
+def choose_cylinder_grid(radius, draft, target_panels):
+    """평평한 바닥 원통: 목표 1/4 패널 수에 가장 가까운 (n, n_z)를 고릅니다(choose_grid와 같은 방식)."""
+    best = None
+    for n in range(1, _MAX_N + 1):
+        nz_ideal = draft * 4 * n / (np.pi * radius)
+        for nz in range(max(1, int(nz_ideal * 0.5)), int(nz_ideal * 2) + 2):
+            panels = count_cylinder_panels(n, nz)
+            aspect = (draft / nz) / (np.pi * radius / (4 * n))
+            aspect = max(aspect, 1.0 / aspect)
+            score = abs(panels - target_panels) / target_panels + _ASPECT_WEIGHT * (aspect - 1.0)
+            if best is None or score < best[0]:
+                best = (score, n, nz)
+    return best[1], best[2]
+
+
+def _oriented(corners, outward):
+    """(p3 - p1) x (p4 - p2)가 outward 방향을 향하도록 꼭짓점 순서를 정합니다."""
+    p = [np.asarray(q, dtype=float) for q in corners]
+    normal = np.cross(p[2] - p[0], p[3] - p[1])
+    return p if np.dot(normal, outward) > 0 else [p[0], p[3], p[2], p[1]]
+
+
+def build_cylinder_panels(radius, draft, n, nz):
+    """평평한 바닥 원통 1/4 모델 패널 리스트. 좌표계: 수면 z = 0, 아래가 음수."""
+    panels = []
+    # 옆면: 원통 + 반구와 같은 분할
+    z_levels = -draft * np.arange(nz + 1) / nz
+    theta = (np.pi / 2) * np.arange(2 * n + 1) / (2 * n)
+    for k in range(nz):
+        for j in range(2 * n):
+            c0, s0 = np.cos(theta[j]), np.sin(theta[j])
+            c1, s1 = np.cos(theta[j + 1]), np.sin(theta[j + 1])
+            corners = [
+                (radius * c0, radius * s0, z_levels[k]),
+                (radius * c0, radius * s0, z_levels[k + 1]),
+                (radius * c1, radius * s1, z_levels[k + 1]),
+                (radius * c1, radius * s1, z_levels[k]),
+            ]
+            mid = (theta[j] + theta[j + 1]) / 2
+            panels.append(_oriented(corners, (np.cos(mid), np.sin(mid), 0.0)))
+
+    # 바닥: 가운데 정사각형 + 둘레로 잇는 두 패치 (모두 z = -draft, 바깥 = -z)
+    core = _CORE_FRACTION * radius
+    m = _bottom_rim_layers(n)
+    down = (0.0, 0.0, -1.0)
+    grid = core * np.arange(n + 1) / n
+    for i in range(n):
+        for j in range(n):
+            corners = [
+                (grid[i], grid[j], -draft),
+                (grid[i + 1], grid[j], -draft),
+                (grid[i + 1], grid[j + 1], -draft),
+                (grid[i], grid[j + 1], -draft),
+            ]
+            panels.append(_oriented(corners, down))
+
+    t_levels = np.arange(m + 1) / m
+    for patch in (0, 1):
+        for i in range(n):
+            for k in range(m):
+                quad = []
+                for a, b in ((i, k), (i + 1, k), (i + 1, k + 1), (i, k + 1)):
+                    if patch == 0:  # 정사각형의 x = core 변 -> 원호 0~45도
+                        edge, angle = np.array([core, grid[a]]), (np.pi / 4) * a / n
+                    else:  # 정사각형의 y = core 변 -> 원호 90~45도
+                        edge, angle = np.array([grid[a], core]), np.pi / 2 - (np.pi / 4) * a / n
+                    rim = np.array([radius * np.cos(angle), radius * np.sin(angle)])
+                    x, y = (1.0 - t_levels[b]) * edge + t_levels[b] * rim
+                    quad.append((x, y, -draft))
+                panels.append(_oriented(quad, down))
+    return panels
+
+
+def write_gdf(output_path, panels, gravity=9.80665, title="cylinder + hemisphere, 1/4 model (cubed-sphere octant)"):
     """WAMIT GDF 파일을 씁니다 (ULEN = 1, ISX = ISY = 1, 사각형 패널 4점씩)."""
     with open(output_path, "w") as f:
-        f.write(" WAMIT GDF: cylinder + hemisphere, 1/4 model (cubed-sphere octant)\n")
+        f.write(f" WAMIT GDF: {title}\n")
         f.write(f"{1.0:12.6f} {gravity:12.6f}      ULEN GRAV\n")
         f.write(f"{1:12d} {1:12d}      ISX  ISY\n")
         f.write(f"{len(panels):12d}      NEQN\n")
@@ -127,3 +243,30 @@ def generate_cylinder_hemisphere_mesh(radius, draft_cylinder, target_panels=DEFA
     if output_path:
         write_gdf(output_path, panels)
     return len(panels)
+
+
+def generate_cylinder_mesh(radius, draft, target_panels=DEFAULT_QUARTER_PANELS, output_path=None):
+    """평평한 바닥 원통 1/4 모델 메쉬를 만들고 실제 1/4 패널 수를 반환합니다.
+
+    :param radius: 반지름 R (> 0)
+    :param draft: 흘수 D (> 0) = 총 흘수
+    :param target_panels: 목표 1/4 패널 수 (>= MIN_QUARTER_PANELS)
+    :param output_path: GDF 저장 경로. None이면 파일을 쓰지 않습니다.
+    """
+    if not (radius > 0 and draft > 0):
+        raise ValueError(f"radius and draft must be positive, got radius={radius}, draft={draft}")
+    if target_panels < MIN_QUARTER_PANELS:
+        raise ValueError(f"target_panels must be >= {MIN_QUARTER_PANELS}, got {target_panels}")
+
+    n, nz = choose_cylinder_grid(radius, draft, target_panels)
+    panels = build_cylinder_panels(radius, draft, n, nz)
+    if output_path:
+        write_gdf(output_path, panels, title="cylinder with flat bottom, 1/4 model")
+    return len(panels)
+
+
+def generate_mesh(shape, radius, draft, target_panels=DEFAULT_QUARTER_PANELS, output_path=None):
+    """shape(1 원통 + 반구, 2 원통)에 맞는 1/4 모델 메쉬를 만들고 실제 1/4 패널 수를 반환합니다."""
+    if check_shape(shape) == SHAPE_CYLINDER:
+        return generate_cylinder_mesh(radius, draft, target_panels, output_path)
+    return generate_cylinder_hemisphere_mesh(radius, draft, target_panels, output_path)

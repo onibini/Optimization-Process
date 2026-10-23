@@ -3,7 +3,15 @@ import sys
 import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
-from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, MIN_QUARTER_PANELS
+from src.physics.mesh_axisymmetric_shape import (
+    DEFAULT_QUARTER_PANELS,
+    DEFAULT_SHAPE,
+    MIN_QUARTER_PANELS,
+    SHAPE_CYLINDER,
+    SHAPES,
+    check_shape,
+    total_draft,
+)
 from src.physics.wamit_handler import (
     DEFAULT_OMEGA_MAX,
     DEFAULT_SOLVER,
@@ -46,9 +54,14 @@ def print_result(best_x, best_f, config):
         radius, draft = config["fixed_radius"], config["fixed_draft"]
         layout_vars = best_x
 
-    # Draft는 원통부 길이이며, 반구 바닥(반지름 R)이 그 아래에 붙으므로 총 흘수는 D + R
+    # 원통 + 반구: Draft는 원통부 길이, 총 흘수 D + R. 원통: Draft가 곧 총 흘수.
+    shape = config.get("shape") or DEFAULT_SHAPE
+    print(f"Shape        : {SHAPES[shape]}")
     print(f"Radius R     : {radius:.3f} m")
-    print(f"Draft D (cyl): {draft:.3f} m  (total draft D+R = {draft + radius:.3f} m)")
+    if shape == SHAPE_CYLINDER:
+        print(f"Draft D      : {draft:.3f} m  (total draft)")
+    else:
+        print(f"Draft D (cyl): {draft:.3f} m  (total draft D+R = {total_draft(shape, radius, draft):.3f} m)")
 
     if opt_mode in (2, 3):
         positions = decode_symmetric_positions(layout_vars, config["num_wecs"])
@@ -71,6 +84,11 @@ def main(cfg_path="config.cfg"):
         print(f"Error: {err}")
         sys.exit(1)
     num_wecs = int(cfg["WEC Parameters"]["NumWECs"])
+    try:
+        shape = check_shape(int(cfg["WEC Parameters"].get("Shape", DEFAULT_SHAPE)))
+    except ValueError as err:
+        print(f"Error: {err}")
+        sys.exit(1)
 
     # 3. OptMode에 따른 문제 세팅
     raw_constraints = cfg["Constraints"]
@@ -103,6 +121,7 @@ def main(cfg_path="config.cfg"):
         sys.exit(1)
     grid_text = "adaptive frequencies around the heave resonance" if freq_grid else f"{n_omega} frequencies"
     print(f"WAMIT: Solver={solver}, {grid_text} up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
+    print(f"WEC shape: {SHAPES[shape]}")
     if workers > 1:
         print(f"WAMIT: {workers} runs at the same time, NCPU={ncpu} each ({workers * ncpu} cores in total)")
     wamit_data = {
@@ -114,6 +133,7 @@ def main(cfg_path="config.cfg"):
         "OmegaMax": omega_max,
         "FreqGrid": freq_grid,
         "Workers": workers,
+        "Shape": shape,
     }
 
     if opt_mode == 1:

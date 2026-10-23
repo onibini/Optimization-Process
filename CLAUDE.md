@@ -60,6 +60,7 @@
 - **모든 설계 변수(반지름 R, 흘수 D, WEC 좌표 x/y)는 양수(> 0)만 허용합니다.**
   `config.cfg`의 탐색 범위는 `0 < Min < Max` 이어야 하며, `FixedRadius`, `FixedDraft`,
   `MinSpacing`, `StepSize`도 양수여야 합니다 (`src/utils/validation.py`).
-- `Draft`는 원통부 길이이며, 총 흘수는 `Draft + Radius` 입니다 (반구 바닥).
+- 형상은 `Shape`로 고릅니다. 1(기본) 원통 + 반구: `Draft`는 원통부 길이, 총 흘수는 `Draft + Radius`.
+  2 평평한 바닥 원통: `Draft`가 총 흘수입니다.
 - 물리 해석 입력(WAMIT .pot/.frc/.cfg/.gdf)을 바꾸는 변경은 보고서에 명시하고, 그렇지 않은 리팩터링은
   수정 전후 WAMIT 입력 파일이 동일함을 확인합니다.

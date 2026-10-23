@@ -44,7 +44,7 @@ This project is a scientific optimization framework written in Python. It optimi
 │   │
 │   ├── physics/               # Hydrodynamic simulation wrapper and calculations
 │   │   ├── wamit_handler.py   # Writes WAMIT configuration/POT/FRC files and runs WAMIT.exe (WamitRunError on failure)
-│   │   ├── mesh_axisymmetric_shape.py # Cylinder + hemisphere 1/4-model GDF mesh (cubed-sphere hemisphere, panel count set by MeshPanels)
+│   │   ├── mesh_axisymmetric_shape.py # Quarter-model GDF meshes: cylinder + hemisphere (cubed-sphere) and flat-bottom cylinder, panel count set by MeshPanels
 │   │   ├── rao_calc.py        # Parses WAMIT output files (.out, .hst, .1, .3) to extract RAO matrices
 │   │   ├── power_calc.py      # Calculates power output using wave spectrum integrations
 │   │   └── wave_spectrum.py   # Wave spectra: JONSWAP (ITTC, Goda) and Pierson-Moskowitz
@@ -129,4 +129,4 @@ docs/
 - **Grid steps**: `config['step_size']` is a list with one step per design variable (`resolve_step_sizes`: `{Var}Step` key, else `StepSize`). `grid_max_indices` adds a small tolerance so float error never drops the upper bound (e.g. (30-0.1)/0.1).
 - **WAMIT outputs**: `.frc` requests only `.1` (added mass/damping) and `.3` (diffraction exciting force, used for the RAO). `.2` (Haskind) is off by default; `calculate_rao_matrix(..., excitation="haskind")` and `write_frc_file(..., excitation="haskind")` switch back.
 - **Positivity rule**: all design variables (R, D, x, y) are strictly positive. `get_*_config` calls `validate_design_bounds` / `require_positive` and raises `ConfigValidationError`; `write_wamit_inputs` also refuses non-positive radius/draft as a last guard.
-- **Geometry convention**: `Draft` is the cylindrical length; total draft = `Draft + Radius` (hemispherical bottom).
+- **Geometry convention**: `Shape` 1 (default): `Draft` is the cylindrical length, total draft = `Draft + Radius` (hemispherical bottom). `Shape` 2: flat-bottom cylinder, `Draft` is the total draft. Mass and hydrostatic stiffness come from the WAMIT output (volume, `.hst`), so the RAO and power code is the same for both shapes.

@@ -5,7 +5,13 @@ import re
 import subprocess
 import warnings
 
-from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, generate_cylinder_hemisphere_mesh
+from src.physics.mesh_axisymmetric_shape import (
+    DEFAULT_QUARTER_PANELS,
+    DEFAULT_SHAPE,
+    SHAPE_CYLINDER,
+    check_shape,
+    generate_mesh,
+)
 
 # 32-bit WAMIT은 (기수 x 기당 패널 수)가 약 1,100을 넘으면 메모리 할당 오류가 납니다 (R=2.5, D=5.0, 5기 실측:
 # 1,075 성공, 1,120~1,380 실패). 이 값을 넘기면 경고합니다. 실제 한계는 형상·배치에 따라 다를 수 있습니다.
@@ -50,16 +56,21 @@ FREQ_GRID_TAIL_STEP = 2 * OMEGA_STEP
 _LATTICE = OMEGA_STEP / 4  # 0.0125 rad/s: 구간 경계는 이 격자에 맞춥니다
 
 
-def heave_omega0(radius, draft):
-    """부력 기준 상하동요 고유진동수(부가질량 제외) sqrt(g / (draft + 2 radius / 3)) [rad/s]."""
+def heave_omega0(radius, draft, shape=DEFAULT_SHAPE):
+    """부력 기준 상하동요 고유진동수(부가질량 제외) sqrt(C33 / m) = sqrt(g V / A_w) [rad/s].
+
+    원통 + 반구: sqrt(g / (D + 2R/3)), 평평한 바닥 원통: sqrt(g / D).
+    """
+    if check_shape(shape) == SHAPE_CYLINDER:
+        return math.sqrt(GRAVITY / draft)
     return math.sqrt(GRAVITY / (draft + 2.0 * radius / 3.0))
 
 
-def adaptive_omegas(radius, draft, omega_max=None):
+def adaptive_omegas(radius, draft, omega_max=None, shape=DEFAULT_SHAPE):
     """적응형 주파수 목록(rad/s, 오름차순). 공진 구간이 상한 안에 없으면 균일 격자(``omega_grid``)와 같습니다."""
     n_points, _ = omega_grid(omega_max)
     omega_max = OMEGA_MIN + (n_points - 1) * OMEGA_STEP
-    w0 = heave_omega0(radius, draft)
+    w0 = heave_omega0(radius, draft, shape)
 
     def snap(value):
         return round(value / _LATTICE) * _LATTICE
@@ -138,7 +149,8 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
         )
 
     # 2. GDF 파일 생성
-    write_gdf_if_needed(gdf_path, radius, draft, target_panels)
+    shape = check_shape(config.get("shape") or DEFAULT_SHAPE)
+    write_gdf_if_needed(gdf_path, radius, draft, target_panels, shape)
 
     # 3. fnames.wam 작성
     with open(os.path.join(workspace_dir, "fnames.wam"), "w") as f:
@@ -150,7 +162,7 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
 
     # 4. POT 파일 작성
     freq_grid = check_freq_grid(config.get("freq_grid") or 0)
-    omegas = adaptive_omegas(radius, draft, config.get("omega_max")) if freq_grid else None
+    omegas = adaptive_omegas(radius, draft, config.get("omega_max"), shape) if freq_grid else None
     write_pot_file(workspace_dir, body_positions, config, omegas)
 
     # 5. FRC 파일 작성
@@ -163,13 +175,13 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
     write_config_wam(workspace_dir, NCPU, RAMGBMAX)
 
 
-def write_gdf_if_needed(gdf_path, radius, draft, target_panels):
+def write_gdf_if_needed(gdf_path, radius, draft, target_panels, shape=DEFAULT_SHAPE):
     meta_path = f"{gdf_path}.meta.json"
     mesh_meta = {
         "radius": round(float(radius), 10),
         "draft": round(float(draft), 10),
         "target_panels": int(target_panels),
-        "mesh": "cubed-sphere-v1",
+        "mesh": "cubed-sphere-v1" if shape != SHAPE_CYLINDER else "flat-cylinder-v1",
     }
 
     if os.path.exists(gdf_path) and os.path.exists(meta_path):
@@ -180,7 +192,7 @@ def write_gdf_if_needed(gdf_path, radius, draft, target_panels):
         except (OSError, json.JSONDecodeError):
             pass
 
-    generate_cylinder_hemisphere_mesh(radius, draft, target_panels=target_panels, output_path=gdf_path)
+    generate_mesh(shape, radius, draft, target_panels=target_panels, output_path=gdf_path)
 
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(mesh_meta, f, indent=2)
