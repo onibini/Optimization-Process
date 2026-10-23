@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — GitHub 메인 페이지(README) 개편과 사용 설명서
+보고서: [docs/reports/2026-10-23_19_readme-and-manual.md](docs/reports/2026-10-23_19_readme-and-manual.md)
+
+#### Changed
+- `README.md` 재작성(배지, 개요 그림, 흐름도, 설정 요약, 결과, 인용). `docs/manual_ko.md`(한국어 사용 설명서) 추가. `docs/images/overview.png`.
+
 ### 2026-10-23 — 변수끼리 얽힌(회전) 벤치마크로 최적화 알고리즘 다시 비교
 보고서: [docs/reports/2026-10-23_18_rotated-benchmark.md](docs/reports/2026-10-23_18_rotated-benchmark.md)
 
