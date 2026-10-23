@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-24 — 5기 배열 상호작용 항 비교(WAMIT 대 Capytaine)
+보고서: [docs/reports/2026-10-24_01_interaction-terms.md](docs/reports/2026-10-24_01_interaction-terms.md)
+
+#### Changed
+- `scripts/experiments/solver_compare.py`가 두 해석기의 전체 A·B 행렬과 WEC별 가진력을 `.npz`로 저장. 5기 배열에서 상호작용 B 0.3%, 상호작용 A 각 항 대비 1~2%(자기 항 대비 0.2%), 가진력 0.2% 이내로 일치.
+
 ### 2026-10-23 — 수력 해석기 분리와 Capytaine(개방 해역) 추가
 보고서: [docs/reports/2026-10-23_24_solver-split-capytaine.md](docs/reports/2026-10-23_24_solver-split-capytaine.md)
 

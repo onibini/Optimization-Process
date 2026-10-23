@@ -7,7 +7,8 @@ computer, so WAMIT must be installed for the WAMIT side.
     python scripts/experiments/solver_compare.py                                  # 1 WEC and a 5-WEC array
     python scripts/experiments/solver_compare.py --shape 2 --cases single --panels 120
 
-Results: ``<out>/solver_compare.csv`` (one row per case) and ``<out>/solver_compare_<case>.csv`` (per frequency).
+Results: ``<out>/solver_compare.csv`` (one row per case), ``<out>/solver_compare_<case>_<R>_<D>.csv`` (WEC1 per
+frequency) and ``.npz`` with the full added-mass, damping and exciting-force arrays of both solvers.
 """
 
 import argparse
@@ -111,6 +112,17 @@ def main(argv=None):
                 "time_capytaine_s": round(tc, 1),
             }
             summary.append(row)
+            # full matrices of both solvers (interaction terms), for plots
+            np.savez(
+                os.path.join(args.out, f"solver_compare_{case}_{radius}_{draft}.npz"),
+                omegas=hw.omegas,
+                positions=np.array(decode_symmetric_positions(ARRAY_LAYOUT, 5) if case == "array" else [(0.0, 0.0)]),
+                **{
+                    f"{name}_{key}": getattr(h, attr)
+                    for name, h in (("wamit", hw), ("capytaine", hc))
+                    for key, attr in (("A", "added_mass"), ("B", "damping"), ("F", "excitation"))
+                },
+            )
             print(row, flush=True)
             with open(os.path.join(args.out, f"solver_compare_{case}_{radius}_{draft}.csv"), "w", newline="") as f:
                 writer = csv.writer(f)
