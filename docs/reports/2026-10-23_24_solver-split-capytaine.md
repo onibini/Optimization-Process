@@ -65,7 +65,7 @@
   - 벽 여부 판정, 해석기 값 검증과 Capytaine + 벽 거부, 프로젝트 기본값.
   - 펼친 메쉬의 부피·수선면적·법선, 주파수 목록.
   - Capytaine 1기 에너지 관계 B = k|F|²/(4ρgC_g)가 3% 이내(시간 규약 확인), 2기 상호성 A12 = A21, 벽 거부.
-- 전체 단위 테스트 245건(skip 3), `ruff check .`, `ruff format --check .` 통과.
+- 전체 단위 테스트 241건(skip 3), `ruff check .`, `ruff format --check .` 통과.
 
 ## 5. 남은 이슈 / 후속 작업
 
