@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from src.physics import mesh_axisymmetric_shape as mesh
-from src.physics.wamit_handler import adaptive_omegas, heave_omega0, write_wamit_inputs
+from src.physics.wamit_handler import adaptive_omegas, heave_omega0, highest_heave_omega0, write_wamit_inputs
 from src.utils.config_parser import parse_wec_cfg
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -100,6 +100,12 @@ class TestShapeQuantities(unittest.TestCase):
         self.assertEqual(heave_omega0(1.5, 2.5), heave_omega0(1.5, 2.5, 1))
         self.assertNotEqual(adaptive_omegas(1.5, 2.5, 3.0, 2), adaptive_omegas(1.5, 2.5, 3.0, 1))
 
+    def test_highest_resonance_of_the_search_range(self):
+        self.assertAlmostEqual(highest_heave_omega0(2, 2.5, 1.0), math.sqrt(9.80665))  # flat cylinder, D = 1 m
+        self.assertGreater(highest_heave_omega0(2, 2.5, 1.0), 3.0)
+        self.assertAlmostEqual(highest_heave_omega0(1, 0.5, 0.5), math.sqrt(9.80665 / (0.5 + 1 / 3)))
+        self.assertLess(highest_heave_omega0(2, 0.5, 1.5), 3.0)
+
     def test_project_default_shape(self):
         cfg = parse_wec_cfg(os.path.join(ROOT, "config.cfg"))
         self.assertEqual(mesh.check_shape(int(cfg["WEC Parameters"]["Shape"])), mesh.DEFAULT_SHAPE)
@@ -127,6 +133,23 @@ class TestWamitInputsUseTheShape(unittest.TestCase):
     def test_invalid_shape_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
             write_wamit_inputs(None, self._config(shape=7), tmp, positions=[(8.0, 0.0)])
+
+
+class TestMeshCheckScript(unittest.TestCase):
+    def test_designs_and_config(self):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "shape_mesh_check", os.path.join(ROOT, "scripts", "experiments", "shape_mesh_check.py")
+        )
+        check = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check)
+        self.assertEqual(check.parse_design("2.5:5.0"), (2.5, 5.0))
+        config = check.build_config(2, 200, 1, 8, None, 1, freq_grid=1)
+        self.assertEqual(
+            (config["shape"], config["mesh_panels"], config["freq_grid"], config["opt_mode"]), (2, 200, 1, 1)
+        )
+        self.assertEqual(config["depth"], 50.0)
 
 
 if __name__ == "__main__":

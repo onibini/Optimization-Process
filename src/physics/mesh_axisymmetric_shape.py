@@ -9,9 +9,9 @@ WAMIT이 나머지 3/4를 대칭으로 처리합니다. 형상은 두 가지입�
     - 원통: 반구 적도와 같은 각도 분할(2n열)의 사각형 패널.
     - 1/4 모델 패널 수는 ``3 n^2 + 2 n n_z`` (n: 반구 분할 수, n_z: 원통 세로 분할 수).
 2. 원통 (평평한 바닥): 반지름 R, 흘수 D. 총 흘수 D.
-    - 옆면: 2n열 x n_z행의 사각형 패널.
+    - 옆면: 2n열 x n_z행의 사각형 패널. 행 간격은 바닥 모서리 쪽으로 촘촘합니다(사인 간격).
     - 바닥: 1/4 원판을 가운데 정사각형(n x n)과, 그 두 변을 둘레 원호(0~45도, 45~90도, 각 n칸)에 잇는
-      두 패치(각 n x m)로 나눔. 둘레에서 옆면과 같은 2n칸으로 맞물립니다.
+      두 패치(각 n x m)로 나눔. 층 간격은 둘레 쪽으로 촘촘하고, 둘레에서 옆면과 같은 2n칸으로 맞물립니다.
     - 1/4 모델 패널 수는 ``n^2 + 2 n m + 2 n n_z``.
 
 ``target_panels``에 가장 가까운 분할이 선택됩니다.
@@ -166,7 +166,8 @@ def build_cylinder_panels(radius, draft, n, nz):
     """평평한 바닥 원통 1/4 모델 패널 리스트. 좌표계: 수면 z = 0, 아래가 음수."""
     panels = []
     # 옆면: 원통 + 반구와 같은 분할
-    z_levels = -draft * np.arange(nz + 1) / nz
+    # 바닥 모서리 쪽으로 촘촘하게(사인 간격): 모서리 근처 유동 변화가 커서 수렴이 빨라짐
+    z_levels = -draft * np.sin((np.pi / 2) * np.arange(nz + 1) / nz)
     theta = (np.pi / 2) * np.arange(2 * n + 1) / (2 * n)
     for k in range(nz):
         for j in range(2 * n):
@@ -196,7 +197,7 @@ def build_cylinder_panels(radius, draft, n, nz):
             ]
             panels.append(_oriented(corners, down))
 
-    t_levels = np.arange(m + 1) / m
+    t_levels = np.sin((np.pi / 2) * np.arange(m + 1) / m)  # 둘레(모서리) 쪽으로 촘촘하게
     for patch in (0, 1):
         for i in range(n):
             for k in range(m):

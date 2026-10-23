@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 평평한 바닥 원통 1기 메쉬 시험(WAMIT, 이 PC)과 메쉬 개선
+보고서: [docs/reports/2026-10-23_22_cylinder-mesh-check.md](docs/reports/2026-10-23_22_cylinder-mesh-check.md)
+
+#### Added
+- `scripts/experiments/shape_mesh_check.py`(1기 개방 해역, 패널 수별 부피·복원력·발전량, `--freq-grid`, `--dump`). `main.py`가 탐색 범위의 공진이 주파수 상한 위에 있으면 시작할 때 경고(`highest_heave_omega0`).
+
+#### Changed
+- 평평한 바닥 원통 메쉬의 옆면 행과 바닥 둘레 층을 바닥 모서리 쪽으로 촘촘하게(사인 간격). 120 패널에서 발전량 오차 약 1% 이내(적응형 격자, 800 패널 대비).
+
 ### 2026-10-23 — 평평한 바닥 원통 WEC 형상 추가 (Shape)
 보고서: [docs/reports/2026-10-23_21_flat-cylinder-shape.md](docs/reports/2026-10-23_21_flat-cylinder-shape.md)
 

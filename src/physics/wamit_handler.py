@@ -66,6 +66,12 @@ def heave_omega0(radius, draft, shape=DEFAULT_SHAPE):
     return math.sqrt(GRAVITY / (draft + 2.0 * radius / 3.0))
 
 
+def highest_heave_omega0(shape, radius_min, draft_min):
+    """탐색 범위에서 가장 높은 공진 주파수 어림(가장 작은 R·D). 이 값이 주파수 상한보다 크면 그 설계의
+    비제어 RAO 피크(PTO 감쇠를 정하는 곳)가 격자 밖에 있어 PTO 감쇠가 격자 끝에서 정해집니다."""
+    return heave_omega0(radius_min, draft_min, shape)
+
+
 def adaptive_omegas(radius, draft, omega_max=None, shape=DEFAULT_SHAPE):
     """적응형 주파수 목록(rad/s, 오름차순). 공진 구간이 상한 안에 없으면 균일 격자(``omega_grid``)와 같습니다."""
     n_points, _ = omega_grid(omega_max)

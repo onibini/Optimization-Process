@@ -17,6 +17,7 @@ from src.physics.wamit_handler import (
     DEFAULT_SOLVER,
     check_freq_grid,
     check_solver,
+    highest_heave_omega0,
     omega_grid,
 )
 from src.physics.wave_spectrum import DEFAULT_WAVE_SPEC, WAVE_SPECTRA, check_wave_spec
@@ -154,6 +155,19 @@ def main(cfg_path="config.cfg"):
     else:
         print("Error: Invalid OptMode in config file.")
         sys.exit(1)
+
+    # 공진이 주파수 격자 위에 있는 설계가 탐색 범위에 있으면 알림 (PTO 감쇠가 격자 끝에서 정해짐)
+    if opt_mode == 2:
+        radius_min, draft_min = problem_config["fixed_radius"], problem_config["fixed_draft"]
+    else:
+        radius_min, draft_min = problem_config["bounds"][0][0], problem_config["bounds"][0][1]
+    w0_max = highest_heave_omega0(shape, radius_min, draft_min)
+    if w0_max > omega_top:
+        print(
+            f"Warning: the smallest designs resonate near {w0_max:.2f} rad/s, above the frequency grid "
+            f"({omega_top:g} rad/s). Their PTO damping is then taken at the end of the grid. "
+            f"Raise OmegaMax to about {1.1 * w0_max:.1f} or raise DraftMin/RadiusMin."
+        )
 
     # 5. Algorithm 선택 및 최적화 실행
     pop_size = int(cfg["AlgorithmSettings"]["PopSize"])
