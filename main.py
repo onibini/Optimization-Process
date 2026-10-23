@@ -12,6 +12,7 @@ from src.physics.mesh_axisymmetric_shape import (
     check_shape,
     total_draft,
 )
+from src.physics.solvers import DEFAULT_HYDRO_SOLVER, HYDRO_SOLVERS, check_solver_settings
 from src.physics.wamit_handler import (
     DEFAULT_OMEGA_MAX,
     DEFAULT_SOLVER,
@@ -87,7 +88,10 @@ def main(cfg_path="config.cfg"):
     num_wecs = int(cfg["WEC Parameters"]["NumWECs"])
     try:
         shape = check_shape(int(cfg["WEC Parameters"].get("Shape", DEFAULT_SHAPE)))
-    except ValueError as err:
+        vertical_wall = int(cfg["WEC Parameters"].get("VerticalWall", 1))
+        hydro_solver = int(cfg["Simulation"].get("HydroSolver", DEFAULT_HYDRO_SOLVER))
+        check_solver_settings(hydro_solver, vertical_wall, opt_mode)
+    except (ValueError, ImportError) as err:
         print(f"Error: {err}")
         sys.exit(1)
 
@@ -123,6 +127,8 @@ def main(cfg_path="config.cfg"):
     grid_text = "adaptive frequencies around the heave resonance" if freq_grid else f"{n_omega} frequencies"
     print(f"WAMIT: Solver={solver}, {grid_text} up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
     print(f"WEC shape: {SHAPES[shape]}")
+    wall_text = "vertical wall at x = 0" if opt_mode != 1 and vertical_wall else "open sea"
+    print(f"Hydrodynamics: {HYDRO_SOLVERS[hydro_solver]}, {wall_text}")
     if workers > 1:
         print(f"WAMIT: {workers} runs at the same time, NCPU={ncpu} each ({workers * ncpu} cores in total)")
     wamit_data = {
@@ -135,6 +141,8 @@ def main(cfg_path="config.cfg"):
         "FreqGrid": freq_grid,
         "Workers": workers,
         "Shape": shape,
+        "VerticalWall": vertical_wall,
+        "HydroSolver": hydro_solver,
     }
 
     if opt_mode == 1:

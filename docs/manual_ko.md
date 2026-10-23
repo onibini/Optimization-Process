@@ -43,7 +43,7 @@
 
 1. 최적화 알고리즘이 설계(형상·배치)를 하나 제안합니다.
 2. WEC 사이 최소 간격을 어기는 설계는 해석 없이 벌점을 받습니다. 이미 계산한 설계는 저장된 값을 씁니다.
-3. 형상에 맞는 표면 격자(mesh)를 자동으로 만들고, WAMIT으로 부가질량·방사감쇠·가진력을 계산합니다(수직벽 반사 포함).
+3. 형상에 맞는 표면 격자(mesh)를 자동으로 만들고, WAMIT(또는 Capytaine)으로 부가질량·방사감쇠·가진력을 계산합니다(WAMIT은 수직벽 반사 포함).
 4. 모든 WEC의 heave 운동을 함께 풀어 RAO(응답 진폭)를 구합니다. PTO(발전기) 감쇠는 선형 감쇠기로 두고, 각 WEC의 heave 공진 주파수에서의 방사감쇠 값을 씁니다.
 5. 파랑 스펙트럼과 곱해 주파수에 대해 적분(Simpson)한 배열 발전량을 알고리즘에 돌려줍니다.
 
@@ -103,6 +103,12 @@
    setx WAMIT_EXE "D:\Program Files\WAMIT\WAMIT.exe"
    ```
 
+   **WAMIT이 없을 때**: 오픈소스 해석기 Capytaine을 쓸 수 있습니다(개방 해역만, 수직벽 없음).
+
+   ```cmd
+   pip install capytaine
+   ```
+
 5. 설치가 잘 되었는지 테스트로 확인합니다(WAMIT 없이 실행됨).
 
    ```cmd
@@ -147,6 +153,7 @@
 | `OptMode` | 1, 2, 3 | 1 형상(1기, 개방 해역), 2 배치(`FixedRadius`, `FixedDraft` 고정), 3 형상 + 배치 |
 | `Algorithm` | 1~5 | 1 DE, 2 PSO, 3 GA, 4 CMA-ES, 5 DEPSO |
 | `WaveSpec` | 1~3 | 1 JONSWAP(ITTC 형식, **기본**), 2 JONSWAP(Goda 근사식), 3 Pierson-Moskowitz |
+| `HydroSolver` | 1, 2 | 1 WAMIT(**기본**, 수직벽 지원), 2 Capytaine(오픈소스, 개방 해역만: `VerticalWall` 0 또는 `OptMode` 1) |
 
 `WaveSpec` 2(Goda 근사식)는 γ = 1.4에서 적분한 유의파고가 입력보다 약 4% 커서 발전량이 약 8% 크게 나옵니다. 특별한 이유가 없으면 1을 쓰세요.
 
@@ -156,10 +163,11 @@
 | --- | --- |
 | `NumWECs` | 1, 3, 5 |
 | `Shape` | 1 원통 + 반구 바닥(기본), 2 평평한 바닥 원통. 2에서는 `Draft`가 총 흘수입니다. |
+| `VerticalWall` | 1(기본): 배치·동시 최적화(`OptMode` 2, 3)에서 x = 0에 수직벽, 0: 벽 없는 개방 해역. `OptMode` 1은 항상 개방 해역입니다. |
 | `MinSpacing` | WEC 중심 사이 최소 거리 = `MinSpacing` × R. 어기면 해석 없이 벌점을 받습니다. |
 | `FixedRadius`, `FixedDraft` | 배치 최적화(`OptMode 2`)에서 쓰는 고정 형상 |
 
-수직벽은 모드 2, 3에서 자동으로 켜집니다. 벽은 x = 0에 있고, WEC와 벽의 간격은 x 하한(`WECn_XMin`)으로 정합니다. 예를 들어 x ≥ 3.0 m이고 R = 2.5 m이면 최소 간격은 0.5 m입니다.
+수직벽은 모드 2, 3에서 기본으로 켜집니다(`VerticalWall`). 벽은 x = 0에 있고, WEC와 벽의 간격은 x 하한(`WECn_XMin`)으로 정합니다. 예를 들어 x ≥ 3.0 m이고 R = 2.5 m이면 최소 간격은 0.5 m입니다.
 
 ### 4-3. [AlgorithmSettings]
 
@@ -314,6 +322,9 @@ python scripts\experiments\run_sites.py --sites 1 2 3 --config config.cfg
 
 **Q. 다른 형상이나 다른 개수의 WEC를 쓸 수 있나요?**
 형상은 원통 + 반구와 평평한 바닥 원통 두 가지(`Shape`), 배치는 1·3·5기 대칭 배치를 지원합니다. 새 축대칭 형상은 `src/physics/mesh_axisymmetric_shape.py`에 메쉬 함수를 더하고 `generate_mesh`와 `heave_omega0`(`src/physics/wamit_handler.py`)에 연결하면 됩니다. 배치 규칙은 `src/utils/mapper.py`에 있습니다.
+
+**Q. WAMIT과 Capytaine은 무엇이 다른가요?**
+같은 메쉬로 계산하면 부가질량·감쇠·가진력이 약 0.2%, 발전량이 약 0.5% 이내로 같습니다. Capytaine은 무료이고 32-bit 메모리 한계가 없지만, 5기 배열 평가가 WAMIT보다 10배 정도 느립니다(8코어 PC에서 약 1.5분, 주파수 51개). 그리고 이 프로그램에서는 수직벽을 지원하지 않습니다. `NCPU`는 Capytaine에서 동시에 푸는 프로세스 수로 쓰입니다.
 
 **Q. 평평한 바닥 원통(Shape 2)에서 주의할 점은?**
 - 공진 주파수가 √(g/D)라서 흘수가 작으면(D < 약 1.1 m) 공진이 기본 주파수 상한(3.0 rad/s)보다 높습니다. 그러면 PTO 감쇠가 격자 끝에서 정해집니다. 시작할 때 경고가 나오면 `OmegaMax`를 경고에 나온 값으로 올리거나 `DraftMin`을 키우세요.

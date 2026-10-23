@@ -1,4 +1,6 @@
-from src.physics import calculate_power, calculate_rao_matrix, run_wamit, write_wamit_inputs
+from src.physics import calculate_power
+from src.physics.rao_calc import rao_from_hydro
+from src.physics.solvers import solve_hydrodynamics
 from src.physics.wamit_handler import DEFAULT_WORKSPACE
 from src.utils.validation import resolve_step_sizes, validate_design_bounds
 
@@ -39,6 +41,8 @@ def get_shape_config(constraints_dict: dict, env_data: dict, wamit_data: dict, w
         "freq_grid": wamit_data.get("FreqGrid"),
         "workers": wamit_data.get("Workers", 1),
         "shape": wamit_data.get("Shape", 1),
+        "vertical_wall": wamit_data.get("VerticalWall", 1),
+        "hydro_solver": wamit_data.get("HydroSolver", 1),
     }
 
 
@@ -49,9 +53,7 @@ def evaluate_shape(vector, config):
     """
     workspace_dir = config.get("workspace_dir", DEFAULT_WORKSPACE)
 
-    write_wamit_inputs(vector, config, workspace_dir)
-    run_wamit(workspace_dir, config.get("wamit_exe"))
-    rao_data = calculate_rao_matrix(workspace_dir, config["num_wecs"])
+    rao_data = rao_from_hydro(solve_hydrodynamics(vector, config, None, workspace_dir))
     total_power, individual_powers = calculate_power(rao_data, config)
 
     return total_power, individual_powers

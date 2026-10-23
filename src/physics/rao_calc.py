@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 
+from src.physics.hydro import HydroData
+
 # 가진력 출력 파일: diffraction(.3, 기본) 또는 Haskind(.2).
 # wamit_handler.EXCITATION_OUTPUT_OPTIONS와 같은 키를 사용합니다.
 EXCITATION_FILES = {"diffraction": "wec.3", "haskind": "wec.2"}
@@ -64,9 +66,9 @@ def get_c_mat_from_hst(workspace_dir, num_wecs, heave_dofs, rho, g):
     return C_mat
 
 
-def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitation="diffraction"):
-    """
-    WAMIT 출력 데이터에 물리적 스케일링을 적용하여 차원화된 RAO를 계산합니다.
+def read_wamit_hydro(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitation="diffraction"):
+    """WAMIT 출력(.out, .hst, .1, 가진력 .3 또는 .2)을 읽어 차원 있는 heave 계수(``HydroData``)로 만듭니다.
+
     - Added Mass (A): rho 곱함
     - Damping (B): rho * omega 곱함
     - Restoring (C): rho * g 곱함
@@ -80,7 +82,7 @@ def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitat
         raise ValueError(f"excitation must be one of {sorted(EXCITATION_FILES)}, got {excitation!r}")
     heave_dofs = {3 + 6 * k: k for k in range(num_wecs)}
 
-    # 1. 질량 행렬(M)과 강성 행렬(C) 구성
+    # 질량 행렬(M)과 강성 행렬(C)
     volumes = get_volumes_from_out(workspace_dir, num_wecs)
     M_mat = np.diag([rho * v for v in volumes])
     C_mat = get_c_mat_from_hst(workspace_dir, num_wecs, heave_dofs, rho, g)
@@ -91,9 +93,6 @@ def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitat
     _require_output_file(file_2)
     hydro_dict, force_dict = {}, {}
 
-    # ==========================================================
-    # [Step 0] 파일 읽기 (.1, 가진력 .3 또는 .2) 및 차원화 (대칭화 삭제)
-    # ==========================================================
     with open(file_1) as f:
         for idx, line in enumerate(f):
             if idx == 0:  # 헤더 스킵
@@ -143,50 +142,55 @@ def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitat
             f"in WAMIT output: {file_2}"
         )
 
-    # ==========================================================
+    return HydroData(
+        omegas=np.array(omega_list),
+        added_mass=np.array([hydro_dict[w]["A_dim"] for w in omega_list]),
+        damping=np.array([hydro_dict[w]["B_dim"] for w in omega_list]),
+        excitation=np.array([force_dict[w] for w in omega_list]),
+        mass=M_mat,
+        stiffness=C_mat,
+    )
+
+
+def rao_from_hydro(hydro):
+    """heave 계수(``HydroData``)로 PTO 감쇠를 정하고 최종 RAO를 계산합니다(해석기와 무관).
+
+    1. PTO 없이 RAO를 구하고, 2. WEC마다 그 RAO가 가장 큰 주파수의 방사감쇠 B_kk를 PTO 감쇠로 정한 뒤,
+    3. PTO를 더해 최종 RAO를 구합니다.
+    """
+    omega_list = [float(w) for w in hydro.omegas]
+    num_wecs = hydro.num_wecs
+    M_mat, C_mat = hydro.mass, hydro.stiffness
+
     # [Step 1] 1차 해석: Base RAO
-    # ==========================================================
     base_rao_results = []
-
-    for w in omega_list:
-        A_dim = hydro_dict[w]["A_dim"]
-        B_rad_dim = hydro_dict[w]["B_dim"]
-        F_dim = force_dict[w]
-
-        Z_base = -(w**2) * (M_mat + A_dim) + 1j * w * B_rad_dim + C_mat
-        X_base = np.linalg.solve(Z_base, F_dim)
+    for k, w in enumerate(omega_list):
+        Z_base = -(w**2) * (M_mat + hydro.added_mass[k]) + 1j * w * hydro.damping[k] + C_mat
+        X_base = np.linalg.solve(Z_base, hydro.excitation[k])
         base_rao_results.append(np.abs(X_base))
-
     base_rao_arr = np.array(base_rao_results)
 
-    # ==========================================================
     # [Step 2] 실제 피크 탐색 및 차원화된 B_pto 추출
-    # ==========================================================
     b_pto_list = np.zeros(num_wecs)
-
     for k in range(num_wecs):
         peak_idx = np.argmax(base_rao_arr[:, k])
-        wn = omega_list[peak_idx]
-        b_pto_list[k] = hydro_dict[wn]["B_dim"][k, k]
+        b_pto_list[k] = hydro.damping[peak_idx][k, k]
 
-    # ==========================================================
     # [Step 3] 2차 해석: 튜닝된 PTO를 얹어서 최종 RAO 도출
-    # ==========================================================
     final_rao_results = []
     B_pto_mat = np.diag(b_pto_list)
-
-    for w in omega_list:
-        A_dim = hydro_dict[w]["A_dim"]
-        B_rad_dim = hydro_dict[w]["B_dim"]
-        F_dim = force_dict[w]
-
-        B_total = B_rad_dim + B_pto_mat
-        Z_final = -(w**2) * (M_mat + A_dim) + 1j * w * B_total + C_mat
-
-        X_final = np.linalg.solve(Z_final, F_dim)
+    for k, w in enumerate(omega_list):
+        B_total = hydro.damping[k] + B_pto_mat
+        Z_final = -(w**2) * (M_mat + hydro.added_mass[k]) + 1j * w * B_total + C_mat
+        X_final = np.linalg.solve(Z_final, hydro.excitation[k])
         final_rao_results.append({"omega": w, "rao_abs": np.abs(X_final), "b_pto": b_pto_list.copy()})
 
     return final_rao_results
+
+
+def calculate_rao_matrix(workspace_dir, num_wecs, rho=1025.0, g=9.80665, excitation="diffraction"):
+    """WAMIT 출력 폴더에서 바로 최종 RAO를 계산합니다(``read_wamit_hydro`` + ``rao_from_hydro``)."""
+    return rao_from_hydro(read_wamit_hydro(workspace_dir, num_wecs, rho, g, excitation))
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 # WEC Array Shape & Layout Optimization
 
-**Simultaneous geometry and layout optimization of heaving point-absorber wave energy converters (WECs) in front of a vertical wall, with WAMIT hydrodynamics and metaheuristic optimizers.**
+**Simultaneous geometry and layout optimization of heaving point-absorber wave energy converters (WECs) in front of a vertical wall, with WAMIT (or open-source Capytaine) hydrodynamics and metaheuristic optimizers.**
 
 [![Python Unit Tests](https://github.com/onibini/Optimization-Process/actions/workflows/python-tests.yml/badge.svg)](https://github.com/onibini/Optimization-Process/actions/workflows/python-tests.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)
@@ -28,7 +28,7 @@ Five heaving buoys in front of a breakwater interact with each other and with th
 | :--- | :--- |
 | **Optimizers** | Differential Evolution (default), PSO, GA, CMA-ES and DEPSO (the DE + PSO hybrid of [Lee et al., 2026](#citation)) |
 | **WEC shapes** | Cylinder with a hemispherical bottom (default) or cylinder with a flat bottom; both described by radius *R* and draft *D* with automatic quarter-model meshes |
-| **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver |
+| **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver; or the open-source [Capytaine](https://github.com/capytaine/capytaine) BEM for open-sea cases (no license needed, same mesh, agrees with WAMIT within about 0.5% in power) |
 | **Power model** | Coupled heave RAOs of all bodies, linear PTO damping tuned to the heave resonance, JONSWAP (ITTC / Goda) or Pierson-Moskowitz spectrum |
 | **Search space** | Symmetric layouts on a 0.1 m grid; canonical ordering removes duplicate layouts; an evaluation cache never runs WAMIT twice for the same design |
 | **Speed options** | Adaptive frequency grid around the resonance (`FreqGrid`), several WAMIT processes at the same time (`Workers`), optional remote runs on another Windows PC over SSH |
@@ -40,8 +40,8 @@ Five heaving buoys in front of a breakwater interact with each other and with th
 flowchart LR
     A[config.cfg<br/>env_data.csv] --> B[Optimizer<br/>DE · PSO · GA · CMA-ES · DEPSO]
     B -->|design vector<br/>R, D, x, y| C{Cache /<br/>spacing check}
-    C -->|new design| D[WAMIT inputs<br/>mesh .gdf · .pot · .frc]
-    D --> E[WAMIT v7]
+    C -->|new design| D[Panel mesh<br/>of the shape]
+    D --> E[WAMIT v7 or<br/>Capytaine]
     E --> F[Added mass, damping,<br/>exciting force]
     F --> G[Heave RAOs + PTO<br/>power in the site spectrum]
     G -->|array power| B
@@ -50,13 +50,13 @@ flowchart LR
 
 1. The optimizer proposes a design vector `[R, D, X1, X2, Y2, X3, Y3]` (WEC1 on the centre line, two mirrored pairs).
 2. Infeasible layouts (minimum spacing) are rejected without WAMIT; known designs come from the cache.
-3. WAMIT computes the hydrodynamic coefficients of the five bodies near the wall.
+3. WAMIT (or Capytaine in the open sea) computes the hydrodynamic coefficients of the bodies.
 4. The coupled heave equations give the RAOs; the PTO damping of each body equals its radiation damping at the heave resonance.
 5. The power spectral density is integrated over the site spectrum (Simpson's rule) and the total array power is returned.
 
 ## Quick start
 
-> Requires Python ≥ 3.10. WAMIT v7 (commercial, not included) is needed for real runs on Windows; the tests run anywhere.
+> Requires Python ≥ 3.10. Real runs need either WAMIT v7 (commercial, not included, Windows) or Capytaine (`pip install capytaine`, open sea only); the tests run anywhere.
 
 ```bash
 git clone https://github.com/onibini/Optimization-Process.git
@@ -77,7 +77,8 @@ Everything is set in [`config.cfg`](config.cfg) (`value  name  - comment` per li
 | `[Simulation]` | `OptMode` | 1 geometry, 2 layout, 3 geometry + layout |
 | | `Algorithm` | 1 DE, 2 PSO, 3 GA, 4 CMA-ES, 5 DEPSO |
 | | `WaveSpec` | 1 JONSWAP ITTC (default), 2 JONSWAP Goda, 3 Pierson-Moskowitz |
-| `[WEC Parameters]` | `NumWECs`, `Shape`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; minimum centre distance = `MinSpacing` × R (4) |
+| | `HydroSolver` | 1 WAMIT (default), 2 Capytaine (open sea only) |
+| `[WEC Parameters]` | `NumWECs`, `Shape`, `VerticalWall`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; wall at x = 0 on (1, default) or off; minimum centre distance = `MinSpacing` × R (4) |
 | `[AlgorithmSettings]` | `PopSize`, `MaxIter`, `F`, `CR`, `w`, `c1`, `c2`, `SigmaInit`, `DEUpdate` | population, generations and optimizer parameters |
 | `[Constraints]` | `RadiusMin/Max`, `DraftMin/Max`, `WECn_X/YMin/Max`, `StepSize` | search ranges (all positive) and grid step (0.1 m) |
 | `[Environment]` | `SiteID` | row of [`data/env_data.csv`](data/env_data.csv) (Hs, Tp, γ, depth) |

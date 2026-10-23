@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 수력 해석기 분리와 Capytaine(개방 해역) 추가
+보고서: [docs/reports/2026-10-23_24_solver-split-capytaine.md](docs/reports/2026-10-23_24_solver-split-capytaine.md)
+
+#### Added
+- `HydroData`(해석기 공통 결과)와 `solvers.solve_hydrodynamics`: `[Simulation] HydroSolver` 1 WAMIT(기본), 2 Capytaine(오픈소스, 개방 해역만, 선택 설치). `[WEC Parameters] VerticalWall`(기본 1, 0이면 개방 해역). `scripts/experiments/solver_compare.py`. `tests/test_solvers.py`(10건).
+
+#### Changed
+- `rao_calc`를 WAMIT 파일 읽기(`read_wamit_hydro`)와 RAO 계산(`rao_from_hydro`)으로 분리(결과는 비트 단위로 같음). 문제 평가 함수는 해석기를 통해 계산.
+
 ### 2026-10-23 — 평평한 바닥 원통 검증(반해석해, Haskind, 에너지 관계)
 보고서: [docs/reports/2026-10-23_23_cylinder-validation.md](docs/reports/2026-10-23_23_cylinder-validation.md)
 

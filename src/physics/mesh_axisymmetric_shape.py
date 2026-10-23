@@ -271,3 +271,12 @@ def generate_mesh(shape, radius, draft, target_panels=DEFAULT_QUARTER_PANELS, ou
     if check_shape(shape) == SHAPE_CYLINDER:
         return generate_cylinder_mesh(radius, draft, target_panels, output_path)
     return generate_cylinder_hemisphere_mesh(radius, draft, target_panels, output_path)
+
+
+def build_mesh_panels(shape, radius, draft, target_panels=DEFAULT_QUARTER_PANELS):
+    """shape에 맞는 1/4 모델 패널 리스트(꼭짓점 4개씩, 법선은 물 쪽)를 돌려줍니다(파일은 쓰지 않음)."""
+    if not (radius > 0 and draft > 0):
+        raise ValueError(f"radius and draft must be positive, got radius={radius}, draft={draft}")
+    if check_shape(shape) == SHAPE_CYLINDER:
+        return build_cylinder_panels(radius, draft, *choose_cylinder_grid(radius, draft, target_panels))
+    return build_panels(radius, draft, *choose_grid(radius, draft, target_panels))

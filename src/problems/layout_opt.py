@@ -1,4 +1,6 @@
-from src.physics import calculate_power, calculate_rao_matrix, run_wamit, write_wamit_inputs
+from src.physics import calculate_power
+from src.physics.rao_calc import rao_from_hydro
+from src.physics.solvers import solve_hydrodynamics
 from src.physics.wamit_handler import DEFAULT_WORKSPACE
 from src.utils.geometry import check_min_distance, penalty_result
 from src.utils.mapper import decode_symmetric_positions
@@ -45,6 +47,8 @@ def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_d
         "freq_grid": wamit_data.get("FreqGrid"),
         "workers": wamit_data.get("Workers", 1),
         "shape": wamit_data.get("Shape", 1),
+        "vertical_wall": wamit_data.get("VerticalWall", 1),
+        "hydro_solver": wamit_data.get("HydroSolver", 1),
         "wave_spec": wave_spec,
     }
 
@@ -64,9 +68,7 @@ def evaluate_layout(vector, config):
         return penalty_result(dist_violation, config["num_wecs"])  # WAMIT 없이 패널티 반환
 
     workspace_dir = config.get("workspace_dir", DEFAULT_WORKSPACE)
-    write_wamit_inputs(vector, config, workspace_dir, positions=positions)
-    run_wamit(workspace_dir, config.get("wamit_exe"))
-    rao_results = calculate_rao_matrix(workspace_dir, config["num_wecs"])
+    rao_results = rao_from_hydro(solve_hydrodynamics(vector, config, positions, workspace_dir))
     total_power, individual_powers = calculate_power(rao_results, config)
 
     return total_power, individual_powers

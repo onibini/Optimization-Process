@@ -116,18 +116,9 @@ def check_solver(solver):
     return solver
 
 
-def write_wamit_inputs(vector, config, workspace_dir, positions=None):
-    """
-    OptMode에 따라 WAMIT 입력 파일(fnames.wam, .pot, .frc, .gdf)을 생성합니다.
-    """
-    if not os.path.exists(workspace_dir):
-        os.makedirs(workspace_dir)
-
+def resolve_geometry(vector, config, positions=None):
+    """OptMode에 따라 (반지름, 흘수, WEC 위치 목록)을 정합니다(해석기 공통)."""
     mode = config["opt_mode"]
-    NCPU = config["ncpu"]
-    RAMGBMAX = config["ram"]
-
-    # 1. 최적화 모드별 형상 및 위치 확정
     if mode == 1:  # Shape Only
         radius, draft = vector[0], vector[1]
         body_positions = [(0.0, 0.0)]
@@ -142,6 +133,22 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
         raise ValueError("WEC positions must be provided for layout or joint optimization modes.")
     if not (radius > 0 and draft > 0):
         raise ValueError(f"Radius and draft must be positive, got radius={radius}, draft={draft}")
+    return radius, draft, body_positions
+
+
+def write_wamit_inputs(vector, config, workspace_dir, positions=None):
+    """
+    OptMode에 따라 WAMIT 입력 파일(fnames.wam, .pot, .frc, .gdf)을 생성합니다.
+    """
+    if not os.path.exists(workspace_dir):
+        os.makedirs(workspace_dir)
+
+    mode = config["opt_mode"]
+    NCPU = config["ncpu"]
+    RAMGBMAX = config["ram"]
+
+    # 1. 최적화 모드별 형상 및 위치 확정
+    radius, draft, body_positions = resolve_geometry(vector, config, positions)
 
     gdf_filename = "wec.gdf"
     gdf_path = os.path.join(workspace_dir, gdf_filename)
@@ -175,7 +182,7 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
     write_frc_file(workspace_dir, len(body_positions))
 
     # 6. CFG 파일 작성
-    write_config_cfg(workspace_dir, mode, solver)
+    write_config_cfg(workspace_dir, mode, solver, config.get("vertical_wall"))
 
     # 7. WAMIT 설정 파일 작성
     write_config_wam(workspace_dir, NCPU, RAMGBMAX)
@@ -258,8 +265,9 @@ def write_config_wam(workspace_dir, NCPU, RAMGBMAX):
         f.write("USERID_PATH=C:\\WAMITv7\n")
 
 
-def write_config_cfg(workspace_dir, opt_mode, solver=DEFAULT_SOLVER):
-    iwallx_val = 0 if opt_mode == 1 else 1
+def write_config_cfg(workspace_dir, opt_mode, solver=DEFAULT_SOLVER, vertical_wall=None):
+    """wec.cfg를 씁니다. 수직벽(IWALLX0)은 OptMode 1이면 끄고, 그 외에는 vertical_wall(없으면 켬)을 따릅니다."""
+    iwallx_val = 0 if opt_mode == 1 or vertical_wall in (0, False) else 1
     with open(os.path.join(workspace_dir, "wec.cfg"), "w") as f:
         f.write("WEC Optimization Configuration\n")
         f.write("ipltdat=1\n")
