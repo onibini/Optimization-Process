@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 해역 스펙트럼에 맞춘 주파수 범위 줄이기 검토
+보고서: [docs/reports/2026-10-23_17_omega-band-assessment.md](docs/reports/2026-10-23_17_omega-band-assessment.md)
+
+#### Changed
+- 검토만(코드 변경 없음). 스펙트럼이 최대값의 0.1% 미만인 아래쪽 주파수를 빼도 발전량 손실 < 0.0005%(점 2~7개 감소, NCPU=8에서 시간 0~14% 단축). 위쪽은 작은 부표의 고주파 공진 때문에 자르면 안 됨(최대 25.7% 손실).
+
 ### 2026-10-23 — WAMIT 동시 실행(Workers)과 동기식 DE 옵션
 보고서: [docs/reports/2026-10-23_16_parallel-wamit.md](docs/reports/2026-10-23_16_parallel-wamit.md)
 
