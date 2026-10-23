@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 변수끼리 얽힌(회전) 벤치마크로 최적화 알고리즘 다시 비교
+보고서: [docs/reports/2026-10-23_18_rotated-benchmark.md](docs/reports/2026-10-23_18_rotated-benchmark.md)
+
+#### Added
+- `algorithm_benchmark.py --rotate`(회전 함수). 결과(WEC 격자, 평가 20,000회): 평균 순위 CMA-ES 2.4, PSO 2.5, DE 2.6, DEPSO 3.0, GA 4.5. GA의 이전 강점은 분리 가능 함수 때문이었음.
+
 ### 2026-10-23 — 해역 스펙트럼에 맞춘 주파수 범위 줄이기 검토
 보고서: [docs/reports/2026-10-23_17_omega-band-assessment.md](docs/reports/2026-10-23_17_omega-band-assessment.md)
 

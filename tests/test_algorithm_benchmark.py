@@ -24,6 +24,14 @@ class TestAlgorithmBenchmark(unittest.TestCase):
             self.assertEqual(len(best), 400, algo)
             self.assertTrue(np.all(np.diff(best) <= 0), algo)
 
+    def test_rotation_keeps_the_minimum_and_couples_variables(self):
+        q = bench.rotation(4)
+        np.testing.assert_allclose(q @ q.T, np.eye(4), atol=1e-12)
+        self.assertGreater(np.abs(q - np.diag(np.diag(q))).max(), 0.1)
+        plain = bench.run_task(("de", "sphere", 4, 50, 0, 300))
+        rotated = bench.run_task(("de", "sphere", 4, 50, 0, 300, True))
+        self.assertFalse(np.array_equal(plain, rotated))
+
     def test_reproducible_and_no_log_files(self):
         cwd = os.getcwd()
         with tempfile.TemporaryDirectory() as tmp:

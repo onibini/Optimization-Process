@@ -90,11 +90,26 @@ class _BudgetReached(Exception):
     pass
 
 
+OPTIMA = {"rosenbrock": 1.0, "schwefel": 420.9687463}  # minimizer coordinate (0 for the other functions)
+
+
+def rotation(dims):
+    """Fixed random orthogonal matrix for ``--rotate`` (non-separable versions of the test functions)."""
+    q, r = np.linalg.qr(np.random.default_rng(1000 + dims).normal(size=(dims, dims)))
+    return q * np.sign(np.diag(r))
+
+
 def run_task(task):
-    """One optimization run; returns the best value (minimization) after every evaluation call, padded to the budget."""
-    algo, name, dims, grid, seed, budget = task
+    """One optimization run; returns the best value (minimization) after every evaluation call, padded to the budget.
+
+    ``task = (algorithm, function, dims, grid, seed, budget[, rotate])``; with ``rotate`` the function is evaluated at
+    ``Q (x - x*) + x*`` (same minimum, variables coupled).
+    """
+    algo, name, dims, grid, seed, budget, *rest = task
+    rotate = bool(rest and rest[0])
     module, runner, kwargs, pop = ALGORITHMS[algo]
     func, lo, hi = FUNCTIONS[name]
+    q, x_star = rotation(dims), OPTIMA.get(name, 0.0)
     config = {
         "dimensions": dims,
         "bounds": [[lo] * dims, [hi] * dims],
@@ -106,7 +121,10 @@ def run_task(task):
     best = []
 
     def evaluate(vector, config):
-        value = float(func(np.asarray(vector, dtype=float)[np.newaxis, :])[0])
+        x = np.asarray(vector, dtype=float)
+        if rotate:
+            x = q @ (x - x_star) + x_star
+        value = float(func(x[np.newaxis, :])[0])
         best.append(min(value, best[-1]) if best else value)
         if len(best) >= budget:
             raise _BudgetReached
@@ -196,6 +214,7 @@ def main(argv=None):
     )
     parser.add_argument("--seeds", type=int, default=30)
     parser.add_argument("--budget", type=int, default=30000, help="evaluation calls per run")
+    parser.add_argument("--rotate", action="store_true", help="rotated (non-separable) test functions")
     parser.add_argument("--workers", type=int, default=0, help="processes (0: all CPU cores, 1: no parallelism)")
     parser.add_argument("--out", default="logs")
     parser.add_argument("--plot", action="store_true")
@@ -203,7 +222,7 @@ def main(argv=None):
 
     os.makedirs(args.out, exist_ok=True)
     tasks = [
-        (algo, name, dims, args.grid, seed, args.budget)
+        (algo, name, dims, args.grid, seed, args.budget, args.rotate)
         for algo, name, dims, seed in itertools.product(args.algorithms, args.functions, args.dims, range(args.seeds))
     ]
     start = time.time()
@@ -221,7 +240,7 @@ def main(argv=None):
         writer = csv.writer(f)
         writer.writerow(["algorithm", "function", "dims", "grid", "seed", "best", "budget"])
         for task, best in zip(tasks, results, strict=True):
-            algo, name, dims, grid, seed, budget = task
+            algo, name, dims, grid, seed, budget, _ = task
             writer.writerow([algo, name, dims, grid, seed, f"{best[-1]:.6e}", budget])
             grouped.setdefault((algo, name, dims), []).append(best[marks])
     finals, curves = {}, {}
