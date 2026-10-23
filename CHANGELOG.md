@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 검증 기준 결과 정리 (docs/validation)
+보고서: [docs/reports/2026-10-23_07_validation-reference.md](docs/reports/2026-10-23_07_validation-reference.md)
+
+#### Added
+- `docs/validation/`: 논문 최적해 재현 결과 기준 CSV와 사용법. `paper_check.py --reference <csv> [--tolerance 0.2]`로 파일 변경 후 총 발전량 변화를 확인.
+
+### 2026-10-23 — 논문 최적해 재현 확인 결과
+보고서: [docs/reports/2026-10-23_06_paper-check-result.md](docs/reports/2026-10-23_06_paper-check-result.md)
+
+#### Changed
+- `paper_check.py`에 가진력·스펙트럼·적분·수심 조합 진단 추가. 결과: 현재 기본(Goda, 영일만항 13 m)은 논문 대비 +8%/+32%. ITTC + Simpson이 -1~0%로 일치하고 영일만항은 수심 33 m에서만 일치. 현재 Goda 식은 Hs를 4.1% 크게 준다. 코드는 바꾸지 않았고 사용자 판단 대기.
+
+### 2026-10-23 — 논문 최적해 재현 확인 도구 (paper_check.py)
+보고서: [docs/reports/2026-10-23_05_paper-check-tool.md](docs/reports/2026-10-23_05_paper-check-tool.md)
+
+#### Added
+- `scripts/experiments/paper_check.py`: 논문 Table 4의 최적해 6개를 `evaluate_joint`로 평가해 논문 발전량과 비교(변형 base/fg/mesh200/mesh200fg). `tests/test_paper_check.py`(5건). 아직 계산용 PC에서 실행하지 않음.
+
 ### 2026-10-23 — 적응형 주파수 격자 옵션 FreqGrid (기본 끔)
 보고서: [docs/reports/2026-10-23_04_freq-grid-option.md](docs/reports/2026-10-23_04_freq-grid-option.md)
 
