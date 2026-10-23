@@ -53,11 +53,11 @@ class TestPaperDesigns(unittest.TestCase):
             positions = decode_symmetric_positions(vector[2:], 5)
             self.assertEqual(check_min_distance(positions, vector[0], config["min_spacing"]), 0.0, key)
 
-    def test_mesh_and_depth_reach_the_problem_config(self):
+    def test_environment_and_mesh_reach_the_problem_config(self):
         base = check.build_config(CFG, "Yeongilmanhang")
         self.assertEqual((base["depth"], base["mesh_panels"], base["freq_grid"]), (13.0, 120, 0))
-        other = check.build_config(CFG, "Yeongilmanhang", mesh_panels=200, depth=33.0)
-        self.assertEqual((other["depth"], other["mesh_panels"]), (33.0, 200))
+        other = check.build_config(CFG, "Yeongilmanhang", mesh_panels=200)
+        self.assertEqual((other["depth"], other["mesh_panels"]), (13.0, 200))
 
 
 class TestPower(unittest.TestCase):
@@ -91,11 +91,11 @@ class TestRun(unittest.TestCase):
             rows = check.main(["--out", tmp, "--meshes", "120", "--sites", "Buan", "Yeongilmanhang"])
             with open(os.path.join(tmp, "paper_check.csv"), encoding="utf-8") as f:
                 table = list(csv.DictReader(f))
-        # 12 combinations per run; runs: 2 Buan designs + 2 Yeongilmanhang designs x 2 depths
-        self.assertEqual(len(rows), 12 * (2 + 4))
+        # 12 combinations per run; runs: 2 Buan designs + 2 Yeongilmanhang designs
+        self.assertEqual(len(rows), 12 * 4)
         self.assertEqual(len(table), len(rows))
         depths = {r["depth"] for r in table if r["site"] == "Yeongilmanhang"}
-        self.assertEqual(depths, {"13.0", "33.0"})
+        self.assertEqual(depths, {"13.0"})
         first = table[0]
         self.assertEqual((first["excitation"], first["spec"], first["integ"]), ("diffraction", "goda", "simpson"))
         self.assertAlmostEqual(float(first["diff_pct"]), (float(first["power_kw"]) / 47.52 - 1) * 100, places=2)

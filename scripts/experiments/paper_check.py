@@ -5,15 +5,14 @@ optimal design of Table 4 is evaluated with the settings of the current process 
 rad/s grid of 51 frequencies, JONSWAP Goda, gamma 1.4). The total power is compared with the value of the paper.
 Nothing is optimized here.
 
-Each WAMIT run (one per design, mesh and depth) writes both exciting-force files, so every power below is computed from
+Each WAMIT run (one per design and mesh) writes both exciting-force files, so every power below is computed from
 the same hydrodynamic data and differs only in how the data are used:
 
     excitation  diffraction (wec.3, current default) or haskind (wec.2, the process before 2026-10-21)
     spec        wave spectrum: goda (WaveSpec 2, current) or ittc (WaveSpec 1)
     integ       frequency integration: simpson (current), trapz, or rect (sum of S * d_omega over the 51 points)
 
-The environment depth of the three sites comes from data/env_data.csv; Yeongilmanhang was 33 m before 2026-10-21 and is
-13 m now, so that site is also run with 33 m (``--depths both``).
+The environment (Hs, Tp, gamma, depth) of the three sites comes from data/env_data.csv.
 
 Run on the compute PC (WAMIT is needed)::
 
@@ -59,7 +58,6 @@ PAPER_DESIGNS = {
     ("Yeongilmanhang", "sequential"): (3.0, 30.0, 3.0, 11.9, 3.0, 2.5, 4.8, 29.23),
     ("Yeongilmanhang", "simultaneous"): (3.0, 30.0, 3.0, 11.7, 3.0, 2.5, 4.9, 29.32),
 }
-OLD_DEPTHS = {"Yeongilmanhang": 33.0}  # env_data.csv before 2026-10-21 (now 13 m)
 EXCITATIONS = ("diffraction", "haskind")
 SPECS = {"goda": 2, "ittc": 1}
 INTEGRATIONS = ("simpson", "trapz", "rect")
@@ -91,7 +89,7 @@ def paper_vector(design):
     return [radius, draft, x3, x2, y2, x1, y1]
 
 
-def build_config(cfg, site, mesh_panels=None, depth=None):
+def build_config(cfg, site, mesh_panels=None):
     wamit = cfg["WAMIT Settings"]
     wamit_data = {
         "NCPU": int(wamit["NCPU"]),
@@ -103,8 +101,6 @@ def build_config(cfg, site, mesh_panels=None, depth=None):
         "FreqGrid": 0,  # the paper used the uniform 0.05 rad/s grid
     }
     env = load_env_data(SITE_IDS[site])
-    if depth is not None:
-        env["Depth"] = float(depth)
     wave_spec = int(cfg["Simulation"]["WaveSpec"])
     return get_joint_config(cfg["Constraints"], cfg["WEC Parameters"], 5, env, wamit_data, wave_spec)
 
@@ -170,7 +166,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--meshes", nargs="+", type=int, default=[120, 200])
     parser.add_argument("--sites", nargs="+", default=list(SITE_IDS), choices=list(SITE_IDS))
-    parser.add_argument("--depths", choices=["current", "both"], default="both")
     parser.add_argument("--config", default=os.path.join(ROOT, "config.cfg"))
     parser.add_argument("--out", default="logs")
     parser.add_argument("--dry-run", action="store_true")
@@ -194,11 +189,8 @@ def main(argv=None):
             print("   positions " + ", ".join(f"({x:g}, {y:g})" for x, y in positions), flush=True)
             if args.dry_run:
                 continue
-            depths = [None]
-            if args.depths == "both" and site in OLD_DEPTHS:
-                depths.append(OLD_DEPTHS[site])
-            for mesh, depth in itertools.product(args.meshes, depths):
-                config = build_config(cfg, site, mesh, depth)
+            for mesh in args.meshes:
+                config = build_config(cfg, site, mesh)
                 raos = run_hydrodynamics(vector, config)
                 combos = itertools.product(EXCITATIONS, SPECS.items(), INTEGRATIONS)
                 for excitation, (spec_name, spec), integ in combos:

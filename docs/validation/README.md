@@ -2,7 +2,7 @@
 
 프로세스(주파수 격자, 메쉬, 스펙트럼, 물리 코드, 환경 파일 등)를 바꾼 뒤 결과가 바뀌었는지 확인하기 위한 기준 자료입니다.
 
-- 기준 파일: [paper_check_reference.csv](paper_check_reference.csv) (192행; 계산용 PC, 2026-10-23)
+- 기준 파일: [paper_check_reference.csv](paper_check_reference.csv) (144행; 계산용 PC, 2026-10-23)
 - 만든 도구: `scripts/experiments/paper_check.py`
 - 코드 상태: 커밋 `ee65e22` (FreqGrid 추가 직후; `FreqGrid=0`, 즉 균일 0.05 rad/s 51점) + `paper_check.py`
 - 설정: 5 WEC, 수직벽(IWALLX0=1), `Solver=0`(반복), `OmegaMax=3.0`, `MeshPanels` 120과 200, JONSWAP γ=1.4, WAMIT v7 32-bit
@@ -12,7 +12,7 @@
 
 논문(동시 최적화 논문 ver14) Table 4의 최적해 6개(부안·칠발도·영일만항 × 순차·동시)를 **최적화 없이** `evaluate_joint`와 같은 경로로 계산한 총 발전량입니다. 설계 변수는 논문 `(x1, y1, x2, y2, x3, r, d)`를 프로젝트 벡터 `[R, D, X1, X2, Y2, X3, Y3] = [r, d, x3, x2, y2, x1, y1]`로 바꿔 넣습니다(논문은 WEC3, 프로젝트는 WEC1이 중심선).
 
-CSV의 각 행은 한 번의 WAMIT 결과를 다음 조합으로 해석한 값입니다: 가진력(`diffraction`=현재 기본 `wec.3`, `haskind`=`wec.2`) × 스펙트럼(`goda`=현재 기본 WaveSpec 2, `ittc`=WaveSpec 1) × 적분(`simpson`=현재, `trapz`, `rect`) × 메쉬(120, 200) × 수심(영일만항만 13과 33).
+CSV의 각 행은 한 번의 WAMIT 결과를 다음 조합으로 해석한 값입니다: 가진력(`diffraction`=현재 기본 `wec.3`, `haskind`=`wec.2`) × 스펙트럼(`goda`=현재 기본 WaveSpec 2, `ittc`=WaveSpec 1) × 적분(`simpson`=현재, `trapz`, `rect`) × 메쉬(120, 200).
 
 ## 2. 논문과의 비교 (diffraction, Simpson)
 
@@ -24,12 +24,10 @@ CSV의 각 행은 한 번의 WAMIT 결과를 다음 조합으로 해석한 값�
 | Chilbaldo | simultaneous | 33 | 31.91 | 31.69 (-0.7%) | 31.72 (-0.6%) | 34.47 (+8.0%) |
 | Yeongilmanhang | sequential | 13 | 29.23 | 35.49 (+21.4%) | 35.61 (+21.8%) | 38.61 (+32.1%) |
 | Yeongilmanhang | simultaneous | 13 | 29.32 | 35.83 (+22.2%) | 35.94 (+22.6%) | 38.98 (+32.9%) |
-| Yeongilmanhang | sequential | 33 | 29.23 | 29.07 (-0.5%) | 29.16 (-0.2%) | 31.62 (+8.2%) |
-| Yeongilmanhang | simultaneous | 33 | 29.32 | 29.09 (-0.8%) | 29.16 (-0.5%) | 31.65 (+7.9%) |
 
 - **현재 기본값(Goda)은 논문보다 약 8% 높다**: 코드의 Goda 식은 적분하면 입력 Hs를 약 4.1% 크게 준다(ITTC는 0.15% 이내). 논문 숫자는 ITTC와 맞는다.
 - **부안·칠발도는 ITTC로 -0.2~-1.8%에서 논문과 일치** → 이 평가 과정의 정확도는 논문 수준이다.
-- **영일만항은 수심 13 m에서는 +21%**, 33 m에서만 일치한다. 사용자는 실제 수심이 13 m라고 확인했고, 환경 파일의 33 m(옛 `env_data.csv`) 오류로 논문 계산이 되었다고 판단했다(2026-10-23). 따라서 논문 영일만항 수치는 13 m의 참값이 아니다.
+- **영일만항은 실제 수심 13 m가 정답**이고(사용자 확인, 2026-10-23), 현재 `env_data.csv`도 13 m다. 논문의 영일만항 수치(29.23, 29.32 kW)는 환경 파일의 잘못된 수심(33 m)으로 계산된 것으로 보여 이 해역의 논문 대비 +21%(ITTC)는 비교 대상이 아니라 논문 쪽 값의 문제다. 이 해역의 기준값은 논문이 아니라 13 m로 계산한 현재 결과다(33 m 결과는 기준에서 뺐다).
 - 자세한 분석: `docs/reports/2026-10-23_06_paper-check-result.md`.
 
 ## 3. 파일을 바꾼 뒤 확인하는 법

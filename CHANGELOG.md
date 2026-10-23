@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 영일만항 수심 33 m 결과를 검증 기준에서 제거
+보고서: [docs/reports/2026-10-23_08_remove-yeongil-33m.md](docs/reports/2026-10-23_08_remove-yeongil-33m.md)
+
+#### Removed
+- `docs/validation/paper_check_reference.csv`의 영일만항 33 m 행(192 → 144행), `paper_check.py --depths`와 `OLD_DEPTHS`. 영일만항의 정답 수심은 13 m.
+
 ### 2026-10-23 — 검증 기준 결과 정리 (docs/validation)
 보고서: [docs/reports/2026-10-23_07_validation-reference.md](docs/reports/2026-10-23_07_validation-reference.md)
 
