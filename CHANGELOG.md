@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 평평한 바닥 원통 검증(반해석해, Haskind, 에너지 관계)
+보고서: [docs/reports/2026-10-23_23_cylinder-validation.md](docs/reports/2026-10-23_23_cylinder-validation.md)
+
+#### Added
+- `scripts/experiments/cylinder_validation.py`: 고유함수 정합 반해석해(Yeung 방법)로 A33·B33, Haskind 대 산란 가진력, B33 = k|X3|²/(4ρgC_g), 흡수 한계를 WAMIT(1기)과 비교. 800 패널에서 A33·B33 0.7%, Haskind 0.12%, 에너지 관계 0.3% 이내. `tests/test_cylinder_validation.py`(6건).
+
 ### 2026-10-23 — 평평한 바닥 원통 1기 메쉬 시험(WAMIT, 이 PC)과 메쉬 개선
 보고서: [docs/reports/2026-10-23_22_cylinder-mesh-check.md](docs/reports/2026-10-23_22_cylinder-mesh-check.md)
 
