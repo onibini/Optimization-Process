@@ -51,8 +51,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
         pbest_fitness = np.zeros(pop_size)
         pbest_powers = []
 
-        for i in range(pop_size):
-            score, p_list = evaluator.evaluate(positions[i].copy())
+        for i, (score, p_list) in enumerate(evaluator.evaluate_batch([p.copy() for p in positions])):
             pbest_fitness[i] = score
             pbest_powers.append(p_list)
 

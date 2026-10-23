@@ -68,8 +68,8 @@ def run_depso(config, eval_func, pop_size, max_iter, F=0.5, CR=0.9, w=0.5, c1=1.
     try:
         print(f"최적화 시작: 초기 군집 {pop_size}개 평가 중...")
         fitness = np.zeros(pop_size)
-        for i in range(pop_size):
-            fitness[i], p_list = evaluator.evaluate(positions[i].copy())
+        for i, (score, p_list) in enumerate(evaluator.evaluate_batch([p.copy() for p in positions])):
+            fitness[i] = score
             if fitness[i] > gbest_fitness:
                 gbest_fitness, gbest_position, gbest_powers = fitness[i], positions[i].copy(), p_list
         pbest_positions, pbest_fitness = positions.copy(), fitness.copy()

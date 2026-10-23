@@ -1,6 +1,8 @@
 import csv
 import json
 import os
+import queue
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import numpy as np
@@ -159,6 +161,7 @@ class CachedEvaluator:
         self.config = config
         self.eval_func = eval_func
         self.logger = logger
+        self.workers = max(1, int(config.get("workers") or 1))  # 동시에 돌리는 WAMIT 수 (evaluate_batch)
         self.memory_cache = {}
         self.cache_hits = 0
         self.total_evals = 0  # 캐시 미스 = 고유 설계점 평가 수 (패널티 포함)
@@ -190,6 +193,56 @@ class CachedEvaluator:
         self.memory_cache[mem_key] = result
         self.logger.write_trial(vector, score, individual_powers, penalized=penalized)
         return result
+
+    def evaluate_batch(self, vectors):
+        """여러 벡터를 평가합니다. ``evaluate``를 차례로 부른 것과 같은 결과·캐시·로그 순서를 냅니다.
+
+        캐시에 없는 서로 다른 설계점은 ``workers``개의 스레드로 동시에 평가합니다. 스레드마다 작업 폴더
+        ``<workspace_dir>/w<k>``를 하나씩 맡으므로 WAMIT 실행이 서로 겹치지 않습니다(WAMIT은 별도 프로세스라
+        스레드로도 동시에 실행됩니다). ``workers``가 1이면 기존 작업 폴더에서 차례로 평가합니다.
+        """
+        keys = []
+        for vector in vectors:
+            quantize_vector_inplace(vector, self.config)
+            canonicalize_vector_inplace(vector, self.config["opt_mode"], self.config["num_wecs"])
+            keys.append(make_cache_key(vector, self.config))
+
+        first = {}  # 캐시에 없는 설계점 -> 처음 나온 위치
+        for idx, key in enumerate(keys):
+            if key not in self.memory_cache and key not in first:
+                first[key] = idx
+        todo = list(first.items())
+        if self.workers > 1 and len(todo) > 1:
+            base = self.config.get("workspace_dir", "workspace")
+            slots = queue.Queue()
+            for k in range(self.workers):
+                slots.put(os.path.join(base, f"w{k}"))
+
+            def run(idx):
+                workspace = slots.get()
+                try:
+                    return self.eval_func(vectors[idx], {**self.config, "workspace_dir": workspace})
+                finally:
+                    slots.put(workspace)
+
+            with ThreadPoolExecutor(max_workers=self.workers) as pool:
+                outputs = list(pool.map(run, [idx for _, idx in todo]))
+        else:
+            outputs = [self.eval_func(vectors[idx], self.config) for _, idx in todo]
+
+        for (key, idx), output in zip(todo, outputs, strict=True):
+            self.total_evals += 1
+            score, individual_powers = output[0], output[1]
+            info = output[2] if len(output) > 2 else {}
+            penalized = bool(info.get("penalized", False))
+            if penalized:
+                self.penalty_evals += 1
+            self.memory_cache[key] = (score, individual_powers)
+            self.logger.write_trial(vectors[idx], score, individual_powers, penalized=penalized)
+
+        fresh = {idx for _, idx in todo}
+        self.cache_hits += sum(1 for idx in range(len(vectors)) if idx not in fresh)
+        return [self.memory_cache[key] for key in keys]
 
     def stats(self):
         return {

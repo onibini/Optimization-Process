@@ -1,4 +1,5 @@
 from src.physics import calculate_power, calculate_rao_matrix, run_wamit, write_wamit_inputs
+from src.physics.wamit_handler import DEFAULT_WORKSPACE
 from src.utils.validation import resolve_step_sizes, validate_design_bounds
 
 
@@ -36,6 +37,7 @@ def get_shape_config(constraints_dict: dict, env_data: dict, wamit_data: dict, w
         "solver": wamit_data.get("Solver"),
         "omega_max": wamit_data.get("OmegaMax"),
         "freq_grid": wamit_data.get("FreqGrid"),
+        "workers": wamit_data.get("Workers", 1),
     }
 
 
@@ -44,7 +46,7 @@ def evaluate_shape(vector, config):
     알고리즘이 vector를 입력하면 점수를 반환하는 함수입니다
     - vector: [radius_value, draft_value]
     """
-    workspace_dir = "workspace"
+    workspace_dir = config.get("workspace_dir", DEFAULT_WORKSPACE)
 
     write_wamit_inputs(vector, config, workspace_dir)
     run_wamit(workspace_dir, config.get("wamit_exe"))

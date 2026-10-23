@@ -42,8 +42,7 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
         fitness = np.zeros(pop_size)
         ind_powers_pop = []
 
-        for i in range(pop_size):
-            score, p_list = evaluator.evaluate(population[i])
+        for i, (score, p_list) in enumerate(evaluator.evaluate_batch(list(population))):
             fitness[i] = score
             ind_powers_pop.append(p_list)
 
@@ -67,7 +66,8 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
             new_fitness[0] = fitness[current_best_idx]
             new_ind_powers.append(ind_powers_pop[current_best_idx])
 
-            for i in range(1, pop_size):
+            children = []
+            for _ in range(1, pop_size):
                 competitors = np.random.choice(pop_size, 4, replace=False)
                 parent1_idx = competitors[0] if fitness[competitors[0]] > fitness[competitors[1]] else competitors[1]
                 parent2_idx = competitors[2] if fitness[competitors[2]] > fitness[competitors[3]] else competitors[3]
@@ -83,9 +83,12 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
                     step_offsets = np.array([np.random.randint(-span, span + 1) for span in mutation_span])
                     child = child + np.where(mutation_mask, step_offsets * step_size, 0)
 
-                child = quantize_vector(child, config)
+                children.append(quantize_vector(child, config))
 
-                score, p_list = evaluator.evaluate(child)
+            # 자식은 이전 세대에서만 만들어지므로 한꺼번에 평가 (Workers > 1이면 WAMIT 동시 실행)
+            for i, (child, (score, p_list)) in enumerate(
+                zip(children, evaluator.evaluate_batch(children), strict=True), 1
+            ):
                 new_population[i] = child
                 new_fitness[i] = score
                 new_ind_powers.append(p_list)

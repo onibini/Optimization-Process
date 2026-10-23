@@ -50,12 +50,12 @@ The result carries `info = {"penalized": True}`, so penalty evaluations are logg
 
 ## 3. Optimization Algorithms
 
-The system implements five optimization engines. All engines use the shared `CachedEvaluator` to quantize vectors to the configured `StepSize`, canonicalize symmetric layouts, and query a grid-indexed in-memory cache before running the expensive physics evaluation. DE, GA, CMA-ES and DEPSO require `PopSize >= 4`.
+The system implements five optimization engines. With `Workers > 1` (`[WAMIT Settings]`) every batch of independent evaluations (initial populations; whole generations of GA, CMA-ES and generation-wise DE) runs several WAMIT processes at the same time through `CachedEvaluator.evaluate_batch`; results are identical to evaluating one by one. All engines use the shared `CachedEvaluator` to quantize vectors to the configured `StepSize`, canonicalize symmetric layouts, and query a grid-indexed in-memory cache before running the expensive physics evaluation. DE, GA, CMA-ES and DEPSO require `PopSize >= 4`.
 
 ### 1. Differential Evolution (DE)
 - **Strategy**: `DE/rand/1/bin`
 - **Equation**: $\vec{u}_i = \vec{x}_{r_1} + F \cdot (\vec{x}_{r_2} - \vec{x}_{r_3})$
-- **Parameters**: `F` (mutation scale), `CR` (crossover probability).
+- **Parameters**: `F` (mutation scale), `CR` (crossover probability), `DEUpdate` (0: the trial replaces its target immediately, so later mutants of the same generation see it, as in the paper; 1: generation-wise, all trials are built from the previous population and evaluated together, which allows several WAMIT runs at the same time).
 
 ### 2. Particle Swarm Optimization (PSO)
 - **Velocity Update**: $\vec{v}_i \leftarrow w\vec{v}_i + c_1 r_1 (\vec{p}_i - \vec{x}_i) + c_2 r_2 (\vec{g} - \vec{x}_i)$

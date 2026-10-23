@@ -17,6 +17,9 @@ OMEGA_STEP = 0.05
 DEFAULT_OMEGA_MAX = 3.0
 MIN_OMEGA_POINTS = 3  # Simpson 적분에 필요한 최소 점 수
 
+# 작업 폴더: 기본 "workspace". WAMIT을 여러 개 동시에 돌리면 "workspace/w0", "workspace/w1", ...을 씁니다.
+DEFAULT_WORKSPACE = "workspace"
+
 # 선형 시스템 솔버 (WAMIT ISOLVE): 0 = 반복, 1 = 직접, N >= 2 = N개 블록 반복.
 # 반복 솔버는 시간이 NEQN^2 x 반복 횟수, 직접 솔버는 NEQN^3에 비례하고 NEQN^2 임시 메모리가 필요합니다.
 DEFAULT_SOLVER = 0

@@ -87,7 +87,7 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3, min_std_fa
 
     # 학습률 설정
     cc = (4 + mueff / N) / (N + 4 + 2 * mueff / N)
-    cs = (mueff + 2) / (N + mu)
+    cs = (mueff + 2) / (N + mueff + 5)  # Hansen, "The CMA Evolution Strategy: A Tutorial" (2016)
     c1 = 2 / ((N + 1.3) ** 2 + mueff)
     cmu = min(1 - c1, 2 * (mueff - 2 + 1 / mueff) / ((N + 2) ** 2 + mueff))
     damps = 1 + 2 * max(0, np.sqrt((mueff - 1) / (N + 1)) - 1) + cs
@@ -119,17 +119,17 @@ def run_cma_es(config, eval_func, pop_size, max_iter, sigma_init=0.3, min_std_fa
             arx = np.zeros((lambda_, N))  # 정규화 공간의 (클리핑된) 연속 샘플
             fitness = np.zeros(lambda_)
 
-            # 1. 자식 개체 생성 및 평가
+            # 1. 자식 개체 생성 후 한꺼번에 평가 (Workers > 1이면 WAMIT 동시 실행; 결과는 차례로 평가한 것과 같음)
+            eval_xs = []
             for k in range(lambda_):
                 z = np.random.randn(N)
                 candidate = np.clip(m + sigma * (B @ (D * z)), 0.0, 1.0)
                 arx[k] = candidate
-
                 # 평가용 사본: 격자 스냅 후 CachedEvaluator가 제자리에서 대칭 정렬함
-                eval_x = quantize_vector(_denormalize_vector(candidate, lower_bounds, bounds_range), config)
-                score, p_list = evaluator.evaluate(eval_x)
-                fitness[k] = score
+                eval_xs.append(quantize_vector(_denormalize_vector(candidate, lower_bounds, bounds_range), config))
 
+            for k, (eval_x, (score, p_list)) in enumerate(zip(eval_xs, evaluator.evaluate_batch(eval_xs), strict=True)):
+                fitness[k] = score
                 if score > best_f:
                     best_f = score
                     best_x = eval_x.copy()

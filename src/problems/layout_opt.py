@@ -1,4 +1,5 @@
 from src.physics import calculate_power, calculate_rao_matrix, run_wamit, write_wamit_inputs
+from src.physics.wamit_handler import DEFAULT_WORKSPACE
 from src.utils.geometry import check_min_distance, penalty_result
 from src.utils.mapper import decode_symmetric_positions
 from src.utils.validation import require_positive, resolve_step_sizes, validate_design_bounds
@@ -42,6 +43,7 @@ def get_layout_config(constraints_dict, params_dict, num_wecs, env_data, wamit_d
         "solver": wamit_data.get("Solver"),
         "omega_max": wamit_data.get("OmegaMax"),
         "freq_grid": wamit_data.get("FreqGrid"),
+        "workers": wamit_data.get("Workers", 1),
         "wave_spec": wave_spec,
     }
 
@@ -60,7 +62,7 @@ def evaluate_layout(vector, config):
     if dist_violation > 0:
         return penalty_result(dist_violation, config["num_wecs"])  # WAMIT 없이 패널티 반환
 
-    workspace_dir = "workspace"
+    workspace_dir = config.get("workspace_dir", DEFAULT_WORKSPACE)
     write_wamit_inputs(vector, config, workspace_dir, positions=positions)
     run_wamit(workspace_dir, config.get("wamit_exe"))
     rao_results = calculate_rao_matrix(workspace_dir, config["num_wecs"])

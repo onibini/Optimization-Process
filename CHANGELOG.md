@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — WAMIT 동시 실행(Workers)과 동기식 DE 옵션
+보고서: [docs/reports/2026-10-23_16_parallel-wamit.md](docs/reports/2026-10-23_16_parallel-wamit.md)
+
+#### Added
+- `CachedEvaluator.evaluate_batch`: 캐시에 없는 설계점을 `Workers`개 WAMIT으로 동시에 평가(작업 폴더 `workspace/w<k>`, 결과·로그는 하나씩 평가한 것과 같음). 초기 개체군(모든 알고리즘)과 GA·CMA-ES 세대에 적용. `config.cfg` `Workers`(기본 1), `DEUpdate`(기본 0 = 즉시 교체, 1 = 세대 단위 DE). `scripts/experiments/parallel_wamit_bench.py`(계산용 PC 처리량 측정). 테스트 7건.
+
+### 2026-10-23 — 최적화 알고리즘 점검과 CMA-ES c_σ 수정
+보고서: [docs/reports/2026-10-23_15_optimizer-review.md](docs/reports/2026-10-23_15_optimizer-review.md)
+
+#### Fixed
+- CMA-ES 보폭 학습률 c_σ를 교과서 식 `(mu_eff + 2) / (N + mu_eff + 5)`로(이전 `(mu_eff + 2) / (N + mu)`). 벤치마크 12개 경우에서 유의한 차이 없음. 다른 알고리즘은 점검 결과만 기록.
+
 ### 2026-10-23 — 파랑 스펙트럼 기본값을 JONSWAP ITTC로, Pierson-Moskowitz 추가
 보고서: [docs/reports/2026-10-23_14_wave-spectrum-default.md](docs/reports/2026-10-23_14_wave-spectrum-default.md)
 

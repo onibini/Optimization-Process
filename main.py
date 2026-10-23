@@ -95,11 +95,16 @@ def main(cfg_path="config.cfg"):
         omega_max = float(cfg["WAMIT Settings"].get("OmegaMax", DEFAULT_OMEGA_MAX))
         n_omega, omega_top = omega_grid(omega_max)
         freq_grid = check_freq_grid(int(cfg["WAMIT Settings"].get("FreqGrid", 0)))
+        workers = int(cfg["WAMIT Settings"].get("Workers", 1))
+        if workers < 1:
+            raise ValueError(f"Workers must be >= 1, got {workers}")
     except ValueError as err:
         print(f"Error: {err}")
         sys.exit(1)
     grid_text = "adaptive frequencies around the heave resonance" if freq_grid else f"{n_omega} frequencies"
     print(f"WAMIT: Solver={solver}, {grid_text} up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
+    if workers > 1:
+        print(f"WAMIT: {workers} runs at the same time, NCPU={ncpu} each ({workers * ncpu} cores in total)")
     wamit_data = {
         "NCPU": ncpu,
         "RAMGBMAX": ram,
@@ -108,6 +113,7 @@ def main(cfg_path="config.cfg"):
         "Solver": solver,
         "OmegaMax": omega_max,
         "FreqGrid": freq_grid,
+        "Workers": workers,
     }
 
     if opt_mode == 1:
@@ -134,8 +140,18 @@ def main(cfg_path="config.cfg"):
     max_iter = int(cfg["AlgorithmSettings"]["MaxIter"])
     algo_settings = cfg["AlgorithmSettings"]
 
+    de_update = "generation" if int(algo_settings.get("DEUpdate", 0)) == 1 else "immediate"
+    batch_algorithms = {3, 4} | ({1} if de_update == "generation" else set())
+    if workers > 1 and algo_type not in batch_algorithms:
+        print(
+            "Warning: Workers > 1 only speeds up the initial population for this algorithm "
+            "(parallel generations: DE with DEUpdate=1, GA, CMA-ES)."
+        )
+
     if algo_type == 1:
         print("Algorithm: [Differential Evolution]")
+        if de_update == "generation":
+            print("  DE update: generation-wise (whole generation evaluated together)")
         best_x, best_f = run_de(
             config=problem_config,
             eval_func=eval_func,
@@ -143,6 +159,7 @@ def main(cfg_path="config.cfg"):
             max_iter=max_iter,
             F=float(algo_settings["F"]),
             CR=float(algo_settings["CR"]),
+            update=de_update,
         )
 
     elif algo_type == 2:
