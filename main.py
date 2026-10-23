@@ -4,7 +4,13 @@ import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_ga, run_pso
 from src.physics.mesh_axisymmetric_shape import DEFAULT_QUARTER_PANELS, MIN_QUARTER_PANELS
-from src.physics.wamit_handler import DEFAULT_OMEGA_MAX, DEFAULT_SOLVER, check_solver, omega_grid
+from src.physics.wamit_handler import (
+    DEFAULT_OMEGA_MAX,
+    DEFAULT_SOLVER,
+    check_freq_grid,
+    check_solver,
+    omega_grid,
+)
 from src.problems import (
     evaluate_joint,
     evaluate_layout,
@@ -83,10 +89,12 @@ def main(cfg_path="config.cfg"):
         solver = check_solver(int(cfg["WAMIT Settings"].get("Solver", DEFAULT_SOLVER)))
         omega_max = float(cfg["WAMIT Settings"].get("OmegaMax", DEFAULT_OMEGA_MAX))
         n_omega, omega_top = omega_grid(omega_max)
+        freq_grid = check_freq_grid(int(cfg["WAMIT Settings"].get("FreqGrid", 0)))
     except ValueError as err:
         print(f"Error: {err}")
         sys.exit(1)
-    print(f"WAMIT: Solver={solver}, {n_omega} frequencies up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
+    grid_text = "adaptive frequencies around the heave resonance" if freq_grid else f"{n_omega} frequencies"
+    print(f"WAMIT: Solver={solver}, {grid_text} up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
     wamit_data = {
         "NCPU": ncpu,
         "RAMGBMAX": ram,
@@ -94,6 +102,7 @@ def main(cfg_path="config.cfg"):
         "MeshPanels": mesh_panels,
         "Solver": solver,
         "OmegaMax": omega_max,
+        "FreqGrid": freq_grid,
     }
 
     if opt_mode == 1:

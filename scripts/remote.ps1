@@ -2,6 +2,9 @@
 # 처음 설정은 docs/remote_compute.md 를 보세요. 설정 파일: scripts/remote.local.psd1
 #
 #   .\scripts\remote.ps1 submit [-Config config.cfg] [-Name 이름] [-Wait]
+#   .\scripts\remote.ps1 submit -Script scripts/experiments/freq_grid_study.py -ScriptArgs "--study grids --quick" [-Name 이름] [-Wait]
+#       main.py 대신 프로젝트 안의 파이썬 스크립트를 계산용 PC에서 실행 (-Config 는 config.cfg 로 함께 올라감)
+#   .\scripts\remote.ps1 submit ... -DryRun      # 계산용 PC에 연결하지 않고 스냅샷만 만들어 내용을 확인
 #   .\scripts\remote.ps1 status [-JobId ID]     # 생략하면 마지막 작업
 #   .\scripts\remote.ps1 tail   [-JobId ID] [-Lines 30]
 #   .\scripts\remote.ps1 fetch  [-JobId ID] [-IncludeWorkspace]
@@ -14,8 +17,11 @@ param(
     [string]$JobId,
     [string]$Config = "config.cfg",
     [string]$Name = "run",
+    [string]$Script,
+    [string]$ScriptArgs = "",
     [int]$Lines = 30,
     [switch]$Wait,
+    [switch]$DryRun,
     [switch]$IncludeWorkspace
 )
 
@@ -83,6 +89,27 @@ switch ($Action) {
         $safeName = $Name -replace "[^A-Za-z0-9_-]", "_"
         $id = "{0}_{1}" -f (Get-Date -Format "yyyyMMdd_HHmmss"), $safeName
 
+        # 0. -Script 검사: 프로젝트 안의 .py 파일이고 스냅샷에 포함되는 폴더에 있어야 합니다.
+        $jobSpec = $null
+        if ($Script) {
+            $scriptPath = Join-Path $ProjectRoot $Script
+            if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+                throw "-Script 파일을 찾을 수 없습니다: $Script (프로젝트 폴더 기준 상대 경로)"
+            }
+            $full = (Resolve-Path -LiteralPath $scriptPath).Path
+            $root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+            if (-not $full.StartsWith($root + "\", [StringComparison]::OrdinalIgnoreCase)) {
+                throw "-Script 는 프로젝트 폴더 안의 파일이어야 합니다: $Script"
+            }
+            $rel = $full.Substring($root.Length + 1) -replace "\\", "/"
+            if ($rel -notmatch "\.py$") { throw "-Script 는 .py 파일이어야 합니다: $rel" }
+            $skipped = @(".git", ".github", "logs", "workspace", "results", "docs", "report", "tests", "__pycache__")
+            if (($rel -split "/")[0] -in $skipped) {
+                throw "-Script 가 코드 스냅샷에 포함되지 않는 폴더에 있습니다: $rel"
+            }
+            $jobSpec = @{ script = $rel; args = $ScriptArgs }
+        }
+
         # 1. 코드 스냅샷 (실행 산출물과 개발용 폴더는 제외)
         $stage = Join-Path ([IO.Path]::GetTempPath()) "wec_stage_$id"
         robocopy $ProjectRoot $stage /E /NFL /NDL /NJH /NJS /NP `
@@ -90,10 +117,25 @@ switch ($Action) {
             | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "robocopy 실패 (코드 $LASTEXITCODE)" }
         Copy-Item $cfgPath (Join-Path $stage "config.cfg") -Force
+        if ($jobSpec) {
+            # 따옴표가 든 인자를 SSH 명령줄로 보내면 깨지므로, 실행할 스크립트와 인자는 스냅샷 안의 파일로 전달합니다.
+            $jobSpec | ConvertTo-Json | Set-Content (Join-Path $stage "_job.json") -Encoding UTF8
+        }
         $zip = Join-Path ([IO.Path]::GetTempPath()) "$id.zip"
         & tar.exe -a -cf $zip -C $stage .
         if ($LASTEXITCODE -ne 0) { throw "tar 실패" }
         Remove-Item $stage -Recurse -Force
+
+        if ($DryRun) {
+            # 계산용 PC에 연결하지 않고 스냅샷만 확인합니다.
+            $entries = @(& tar.exe -tf $zip)
+            Write-Host ("[DryRun] 스냅샷 파일 {0}개: {1}" -f $entries.Count, $zip)
+            Write-Host ("[DryRun] 실행: {0}" -f $(if ($jobSpec) { "python -u $($jobSpec.script) $($jobSpec.args)" } else { "python -u main.py config.cfg" }))
+            Write-Host ("[DryRun] _job.json 포함: {0}, scripts/remote/job_ctl.ps1 포함: {1}" -f `
+                    [bool]($entries -match "_job\.json$"), [bool]($entries -match "job_ctl\.ps1$"))
+            Remove-Item $zip -Force
+            return
+        }
 
         # 2. 업로드 및 풀기, 제어 스크립트 설치
         $rootFwd = $JobsRoot -replace "\\", "/"
@@ -113,8 +155,10 @@ switch ($Action) {
         Copy-Item $cfgPath (Join-Path $dest "config.cfg")
         $commit = (& git -C $ProjectRoot rev-parse --short HEAD 2>$null)
         $dirty = (& git -C $ProjectRoot status --porcelain 2>$null)
-        @{ job_id = $id; name = $safeName; host = $RemoteHost; submitted = (Get-Date).ToString("s");
-            git_commit = "$commit"; git_dirty = [bool]$dirty } | ConvertTo-Json | Set-Content (Join-Path $dest "job.json") -Encoding UTF8
+        $record = @{ job_id = $id; name = $safeName; host = $RemoteHost; submitted = (Get-Date).ToString("s");
+            git_commit = "$commit"; git_dirty = [bool]$dirty }
+        if ($jobSpec) { $record["script"] = $jobSpec.script; $record["script_args"] = $jobSpec.args }
+        $record | ConvertTo-Json | Set-Content (Join-Path $dest "job.json") -Encoding UTF8
         Set-Content $LastJobFile $id -Encoding ASCII
         Write-Host "작업 ID: $id"
 

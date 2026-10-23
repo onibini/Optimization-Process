@@ -3,6 +3,7 @@
 #
 #   start   작업을 SSH 세션과 분리해서 시작 (SSH가 끊겨도 계속 실행)
 #   run     (내부용) 실제로 main.py 를 돌리고 status.json 을 갱신
+#           (작업 폴더에 _job.json 이 있으면 main.py 대신 거기에 적힌 스크립트와 인자를 실행)
 #   status  status.json 출력
 #   tail    run.log 마지막 줄 출력
 #   pack    결과(logs, run.log, status.json, config)를 result.zip 으로 묶기
@@ -49,10 +50,23 @@ switch ($Action) {
         Set-Location $JobDir
         $env:PYTHONUNBUFFERED = "1"
         $env:PYTHONIOENCODING = "utf-8"
-        Write-Status $JobDir "running" @{ pid = $PID; started = (Get-Date).ToString("s") }
+        # 기본은 main.py <설정>. remote.ps1 submit -Script 로 보낸 작업은 _job.json 의 스크립트와 인자를 실행합니다.
+        $runCmd = "`"$Python`" -u main.py `"$Config`""
+        $extra = @{}
+        $jobFile = Join-Path $JobDir "_job.json"
+        if (Test-Path $jobFile) {
+            $spec = Get-Content $jobFile -Raw | ConvertFrom-Json
+            if ($spec.script) {
+                $runCmd = "`"$Python`" -u `"$($spec.script)`" $($spec.args)"
+                $extra["script"] = [string]$spec.script
+            }
+        }
+        $extra["pid"] = $PID
+        $extra["started"] = (Get-Date).ToString("s")
+        Write-Status $JobDir "running" $extra
         $code = 1
         try {
-            & cmd.exe /c "`"$Python`" -u main.py `"$Config`" > run.log 2>&1"
+            & cmd.exe /c "$runCmd > run.log 2>&1"
             $code = $LASTEXITCODE
         }
         catch {
@@ -77,7 +91,7 @@ switch ($Action) {
         $zip = Join-Path $JobDir "result.zip"
         if (Test-Path $zip) { Remove-Item $zip -Force }
         Set-Location $JobDir
-        $items = @("logs", "run.log", "status.json", $Config) | Where-Object { Test-Path $_ }
+        $items = @("logs", "run.log", "status.json", "_job.json", $Config) | Where-Object { Test-Path $_ }
         if ($IncludeWorkspace -and (Test-Path "workspace")) { $items += "workspace" }
         & tar.exe -a -cf result.zip @items
         if ($LASTEXITCODE -ne 0) { throw "tar 실패 (코드 $LASTEXITCODE)" }

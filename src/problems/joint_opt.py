@@ -41,6 +41,7 @@ def get_joint_config(constraints_dict, params_dict, num_wecs, env_data, wamit_da
         "mesh_panels": wamit_data.get("MeshPanels"),
         "solver": wamit_data.get("Solver"),
         "omega_max": wamit_data.get("OmegaMax"),
+        "freq_grid": wamit_data.get("FreqGrid"),
     }
 
 

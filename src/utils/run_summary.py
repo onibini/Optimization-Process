@@ -2,6 +2,8 @@
 
 각 작업 폴더에는 ``scripts/remote.ps1`` 이 남긴 ``job.json``, ``config.cfg`` 와 계산용 PC에서 가져온
 ``status.json``, ``logs/*_summary.json`` 이 들어 있습니다. 없는 파일은 빈 칸으로 둡니다.
+``-Script`` 로 보낸 작업(연구 스크립트)은 ``script`` 칸에 스크립트와 인자가 적히고, 설정(``config.cfg``) 기반 칸과
+최적화 결과 칸은 비어 있습니다.
 """
 
 import csv
@@ -14,6 +16,7 @@ from .config_parser import parse_wec_cfg
 
 COLUMNS = [
     "job_id",
+    "script",
     "state",
     "git_commit",
     "git_dirty",
@@ -27,6 +30,7 @@ COLUMNS = [
     "mesh_panels",
     "solver",
     "omega_max",
+    "freq_grid",
     "best_kw",
     "physics_evals",
     "cache_hits",
@@ -59,13 +63,15 @@ def summarize_job(job_dir):
 
     row = dict.fromkeys(COLUMNS, "")
     row["job_id"] = job.get("job_id") or os.path.basename(os.path.normpath(job_dir))
+    row["script"] = " ".join(part for part in (job.get("script", ""), job.get("script_args", "")) if part)
     row["state"] = status.get("state", "")
     row["git_commit"] = job.get("git_commit", "")
     row["git_dirty"] = job.get("git_dirty", "")
     row["duration_min"] = _duration_min(status)
 
     cfg_path = os.path.join(job_dir, "config.cfg")
-    if os.path.isfile(cfg_path):
+    # -Script 작업은 config.cfg 를 스크립트에 넘길 뿐 최적화 설정이 아니므로 설정 기반 칸을 채우지 않습니다.
+    if os.path.isfile(cfg_path) and not job.get("script"):
         cfg = parse_wec_cfg(cfg_path)
         sim, algo, wamit = cfg.get("Simulation", {}), cfg.get("AlgorithmSettings", {}), cfg.get("WAMIT Settings", {})
         row["site_id"] = cfg.get("Environment", {}).get("SiteID", "")
@@ -77,6 +83,7 @@ def summarize_job(job_dir):
         row["mesh_panels"] = wamit.get("MeshPanels", "")
         row["solver"] = wamit.get("Solver", "")
         row["omega_max"] = wamit.get("OmegaMax", "")
+        row["freq_grid"] = wamit.get("FreqGrid", "")
 
     if "best_fitness" in summary:
         row["best_kw"] = round(summary["best_fitness"] / 1000, 4)

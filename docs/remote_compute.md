@@ -99,6 +99,19 @@ python scripts\summarize_results.py              # results\summary.csv 다시 �
 - `submit`은 `logs/ workspace/ results/ docs/ report/ tests/ .git`을 제외한 코드 스냅샷을 보냅니다.
 - 상태 값: `starting` → `running` → `done` / `failed` / `stopped`.
 
+### 2-1. `main.py` 대신 다른 스크립트 실행 (`-Script`)
+
+WAMIT 검증 같은 연구용 스크립트를 계산용 PC에서 돌릴 때 씁니다. 프로젝트 안의 `.py` 파일을 프로젝트 폴더 기준 상대 경로로 주고, 인자는 `-ScriptArgs`에 한 문자열로 줍니다.
+
+```powershell
+.\scripts\remote.ps1 submit -Name fgrid_quick -Script scripts/experiments/freq_grid_study.py -ScriptArgs "--study grids --quick" -Wait
+.\scripts\remote.ps1 submit ... -DryRun    # 계산용 PC에 연결하지 않고 스냅샷만 만들어 내용(_job.json, 파일 수)을 확인
+```
+
+- 스크립트는 작업 폴더(`C:\wec_jobs\<작업ID>`)에서 `python -u <스크립트> <인자>`로 실행되고, `-Config` 파일은 그대로 `config.cfg`로 올라가 스크립트가 읽을 수 있습니다(`main.py`는 실행되지 않습니다).
+- 스크립트와 인자는 따옴표가 SSH 명령줄에서 깨지지 않도록 스냅샷 안의 `_job.json`으로 전달됩니다. 결과는 `logs/` 아래에 쓰면 기존 `fetch`가 가져오고, `summary.csv`의 `script` 칸에 스크립트와 인자가 적힙니다.
+- `docs/ report/ tests/ logs/ workspace/ results/ .git/ .github/` 안의 파일, `.py`가 아닌 파일, 프로젝트 밖의 파일은 거부됩니다.
+
 ## 3. 결과 구조
 
 ```

@@ -5,6 +5,81 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 적응형 주파수 격자 옵션 FreqGrid (기본 끔)
+보고서: [docs/reports/2026-10-23_04_freq-grid-option.md](docs/reports/2026-10-23_04_freq-grid-option.md)
+
+#### Added
+- `config.cfg [WAMIT Settings] FreqGrid`(0 균일 / 1 적응형): 공진 부근 0.85~1.1 x w0만 0.00625 간격, 1.5 x w0 위는 0.1 간격. `wamit_handler.adaptive_omegas`, `heave_omega0`, `check_freq_grid`, `write_pot_file(..., omegas)`(명시적 주파수 목록).
+- `summary.csv`에 `freq_grid` 열. `tests/test_freq_grid_option.py`(14건).
+
+#### Changed
+- 기본값(0)에서는 WAMIT 입력이 이전과 동일.
+
+### 2026-10-23 — 주파수 격자 검증 4차(grids --quick, 공진 폭 2단계 격자) 결과 분석
+보고서: [docs/reports/2026-10-23_03_freq-grid-quick4-study.md](docs/reports/2026-10-23_03_freq-grid-quick4-study.md)
+
+#### Changed
+- 분석만 수행(코드 변경 없음). `two_stage_fwhm6`은 4개 형상 모두 기준 (a) 통과(정확도·시간), 좁은 공진(R=0.5, D=2.0)은 0.003125 확인 격자 대비 0.01%/0.013%. `two_stage_fwhm10`은 시간 기준 1건 실패. 적응형 0.85~1.1 + 미세 0.00625가 비용은 더 낮고 확인 격자 대비로는 (0.5, 2.0)도 통과하므로, 2단계의 이점은 강건성이다. 구현 대상은 사용자 결정 대기.
+
+### 2026-10-23 — 주파수 격자 시험 도구 3차 개정 (공진 폭에 맞춘 2단계 격자, B_pto 보간 제거)
+보고서: [docs/reports/2026-10-23_02_study-tool-two-stage.md](docs/reports/2026-10-23_02_study-tool-two-stage.md)
+
+#### Added
+- `scripts/experiments/freq_grid_study.py`: 2단계 후보 `two_stage_fwhm6`/`two_stage_fwhm10`(1단계 균일 0.05 결과에서 WEC별 공진 위치·폭 추정 → 폭/n 간격으로 2단계 주파수 추가, 시간·점 수는 1+2단계 합산), 새 열 `stage2_step`/`n_stage2`/`fwhm_est_min`/`fwhm_meas_min`. 가짜 WAMIT로 전체 `grids --quick`를 돌리는 통합 테스트 포함.
+
+#### Removed
+- 시험 도구의 `B_pto` 포물선 보간(`interp`) 후보와 관련 코드·열·테스트(효과 없음). `src/`는 변경 없음.
+
+### 2026-10-23 — 주파수 격자 검증 3차(grids --quick, 구간 상단 1.1, 확인 격자, B_pto 보간) 결과 분석
+보고서: [docs/reports/2026-10-23_01_freq-grid-quick3-study.md](docs/reports/2026-10-23_01_freq-grid-quick3-study.md)
+
+#### Verified
+- 계산용 PC에서 `grids --quick` 3차 실행(14.8분, `reimpl_check` 2.2e-16). 적응형 `0.85~1.1`(꼬리 0.1)은 3개 형상에서 기준 (a)를 만족(총 0.02%, 개별 WEC 0.22% 이내)하고 정확도 동등 균일 격자보다 2~4배, 현재 기본 격자 대비 시간은 1.10~1.65배. 구간 상단 1.0 → 1.1배로 개별 WEC 오차 감소. R=0.5·D=2.0은 공진 반치폭 0.03~0.04라 간격 0.00625 이하가 필요하고, 0.00625 기준격자 자체가 0.003125 대비 총 0.07%, 개별 WEC 0.28% 오차. `B_pto` 포물선 보간(`interp`)은 개별 WEC 오차를 줄이지 못해 `src/` 적용 효과 없음. 코드 변경 없음.
+
+### 2026-10-22 — 주파수 격자 시험 도구 2차 개정 (구간 상단 1.1, 0.003125 확인 격자, B_pto 포물선 보간)
+보고서: [docs/reports/2026-10-22_09_study-tool-update2.md](docs/reports/2026-10-22_09_study-tool-update2.md)
+
+#### Added
+- `scripts/experiments/freq_grid_study.py`: 적응형 `0.85~1.1`(미세 0.0125/0.00625) 후보, R=0.5·D=2.0용 `check_uniform_0.003125` 확인 격자, 비제어 RAO 피크의 포물선 보간으로 `B_pto`를 구하는 `interp` 방식(`rao_calc` 재구현 `rao_with_bpto`, `src/`는 변경 없음). 같은 WAMIT 실행에서 `node`/`interp`를 모두 계산해 방식별로 판정(`+interp`)하고 `reimpl_check`로 재구현 일치를 기록. 테스트 17건.
+
+### 2026-10-22 — 주파수 격자 검증 2차(grids --quick, 기준 (a)) 결과 분석
+보고서: [docs/reports/2026-10-22_08_freq-grid-quick2-study.md](docs/reports/2026-10-22_08_freq-grid-quick2-study.md)
+
+#### Verified
+- 계산용 PC에서 개정한 `grids --quick` 실행(11.4분). 기준 (a)(총 0.1%, 개별 WEC 0.3%, 시간은 정확도 동등 균일 격자와 비교)에서 균일 0.05/0.025는 0/4, 균일 0.0125와 적응형 후보(`0.85~1.0` 등)는 3/4 통과. 적응형 `0.85~1.0`은 51~106점으로 현재 기본 격자 대비 시간 0.87~1.41배, 정확도 동등 균일 격자보다 1.6~4배 빠름. 현재 격자의 오차는 대부분 `B_pto`가 격자 점에 걸려 달라지는 데서 옴(최대 -16%). R=0.5, D=2.0은 모든 격자가 불합격. 코드 변경 없음.
+
+### 2026-10-22 — 주파수 격자 시험 도구 개정 (기준 (a), 좁은 구간, 0.00625 기준격자, 덤프)
+보고서: [docs/reports/2026-10-22_07_study-tool-update.md](docs/reports/2026-10-22_07_study-tool-update.md)
+
+#### Changed
+- `scripts/experiments/freq_grid_study.py`: 판정 기준 (a)(정확도 0.1%/0.3% 우선, 시간은 같은 정확도의 균일 격자와 비교)로 변경하고 판정 CSV와 요약 표 추가. 기준격자를 0.00625 간격으로, 후보를 균일 0.05/0.025/0.0125와 적응형 0.7·0.8·0.85~1.0, 0.00625 미세, NCPU 정렬로 조정.
+- `summary.csv`: `-Script` 작업 행의 `config.cfg` 기반 열을 비움.
+
+#### Added
+- 주파수별 덤프(`logs/dump_*.csv`: 방사 감쇠, RAO, `B_pto`, 발전 밀도)와 비제어 피크(`B_pto`를 정하는 주파수) 열. 테스트 추가. `src/`는 변경 없음.
+
+### 2026-10-22 — 주파수 격자 검증(grids --quick) 결과 분석
+보고서: [docs/reports/2026-10-22_06_freq-grid-quick-study.md](docs/reports/2026-10-22_06_freq-grid-quick-study.md)
+
+#### Verified
+- 계산용 PC(Ryzen 7 9700X)에서 `remote.ps1 submit -Script ... --study grids --quick` 실행(8.5분): `-Script` 경로가 실제 SSH에서 동작. 현재 균일 0.05 격자는 201점 기준 대비 총 파워 +3.7%/-1.2%/-3.8%/+11.1%, 개별 WEC 최대 5.9~41.5% 오차. 미세 0.0125 적응형 격자는 총 파워 0.05% 이내이지만 시간이 19~71% 늘어 판정 기준(0.1%/0.3%/+10%)을 동시에 충족하는 후보가 없음. 코드 변경 없음.
+
+### 2026-10-22 — 원격 계산에 -Script 옵션 추가
+보고서: [docs/reports/2026-10-22_05_remote-script-option.md](docs/reports/2026-10-22_05_remote-script-option.md)
+
+#### Added
+- `scripts/remote.ps1 submit -Script <상대경로.py> -ScriptArgs "<인자>"`: `main.py` 대신 프로젝트 안의 스크립트를 계산용 PC에서 실행(스크립트와 인자는 스냅샷의 `_job.json`으로 전달), `-DryRun`: 계산용 PC에 연결하지 않고 스냅샷만 확인. `summary.csv`에 `script` 칸. 테스트 2건.
+
+#### Changed
+- 주파수 격자 설계안(`docs/frequency_grid_design.md`)에 승인된 결정 기록: 새 격자 기본 끔, 상한 자동 확장은 선택 옵션, 판정 기준 0.1%/0.3%/+10%.
+
+### 2026-10-22 — 주파수 격자 설계안과 검증 스크립트
+보고서: [docs/reports/2026-10-22_04_frequency-grid-design-and-study.md](docs/reports/2026-10-22_04_frequency-grid-design-and-study.md)
+
+#### Added
+- `docs/frequency_grid_design.md`: 주파수 점 수를 NCPU의 배수로 맞추는 옵션(`FreqAlign`)과 공진 인식 격자(`FreqGrid=adaptive`)의 설계안(구현 전, 승인 대기).
+- `scripts/experiments/freq_grid_study.py`: 계산용 PC에서 후보 격자·NCPU·메모리 한계를 비교하는 검증 스크립트(`--dry-run`, `--quick`). 테스트 16건. `src/`와 WAMIT 입력은 바뀌지 않음.
+
 ### 2026-10-22 — 계산용 PC 원격 실행·결과 자동 회수
 보고서: [docs/reports/2026-10-22_03_remote-compute.md](docs/reports/2026-10-22_03_remote-compute.md)
 

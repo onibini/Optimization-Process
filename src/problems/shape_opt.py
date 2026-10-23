@@ -35,6 +35,7 @@ def get_shape_config(constraints_dict: dict, env_data: dict, wamit_data: dict, w
         "mesh_panels": wamit_data.get("MeshPanels"),
         "solver": wamit_data.get("Solver"),
         "omega_max": wamit_data.get("OmegaMax"),
+        "freq_grid": wamit_data.get("FreqGrid"),
     }
 
 

@@ -64,6 +64,46 @@ class RunSummaryTest(unittest.TestCase):
         self.assertEqual([r["job_id"] for r in reader], ["a_job", "b_job"])
         self.assertEqual(list(reader[0].keys()), COLUMNS)
 
+    def test_script_jobs_show_the_script_and_leave_config_and_result_columns_blank(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            job_dir = os.path.join(tmp, "20261022_120000_fgrid")
+            os.makedirs(os.path.join(job_dir, "logs"))
+            with open(os.path.join(job_dir, "job.json"), "w", encoding="utf-8-sig") as f:
+                json.dump(
+                    {
+                        "job_id": "20261022_120000_fgrid",
+                        "script": "scripts/experiments/freq_grid_study.py",
+                        "script_args": "--study grids --quick",
+                    },
+                    f,
+                )
+            with open(os.path.join(job_dir, "status.json"), "w", encoding="utf-8-sig") as f:
+                json.dump({"state": "done", "started": "2026-10-22T12:00:00", "finished": "2026-10-22T12:09:00"}, f)
+            shutil.copy(os.path.join(PROJECT_ROOT, "config.cfg"), os.path.join(job_dir, "config.cfg"))
+            row = collect_rows(tmp)[0]
+        self.assertEqual(row["script"], "scripts/experiments/freq_grid_study.py --study grids --quick")
+        self.assertEqual(row["state"], "done")
+        self.assertEqual(row["duration_min"], 9.0)
+        for column in (
+            "site_id",
+            "opt_mode",
+            "algorithm",
+            "num_wecs",
+            "pop_size",
+            "max_iter",
+            "mesh_panels",
+            "solver",
+            "omega_max",
+            "freq_grid",
+            "best_kw",
+        ):
+            self.assertEqual(row[column], "", column)
+
+    def test_normal_jobs_have_an_empty_script_column(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            make_job(tmp, "20261022_100000_a")
+            self.assertEqual(collect_rows(tmp)[0]["script"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

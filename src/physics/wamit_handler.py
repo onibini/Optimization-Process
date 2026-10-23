@@ -35,6 +35,58 @@ def omega_grid(omega_max=None):
     return n_points, OMEGA_MIN + (n_points - 1) * OMEGA_STEP
 
 
+# 적응형 주파수 격자 (FreqGrid=1): 기본 0.05 간격에서, 비제어 공진 부근 [LO, HI] x w0만 FINE_STEP 간격으로 촘촘히 하고
+# TAIL_RATIO x w0 위쪽은 TAIL_STEP 간격으로 성기게 합니다. w0는 부력 기준 상하동요 고유진동수입니다.
+# 근거: docs/frequency_grid_design.md, docs/reports/2026-10-23_03_freq-grid-quick4-study.md
+GRAVITY = 9.80665
+FREQ_GRID_LO = 0.85
+FREQ_GRID_HI = 1.1
+FREQ_GRID_FINE_STEP = OMEGA_STEP / 8  # 0.00625 rad/s
+FREQ_GRID_TAIL_RATIO = 1.5
+FREQ_GRID_TAIL_STEP = 2 * OMEGA_STEP
+_LATTICE = OMEGA_STEP / 4  # 0.0125 rad/s: 구간 경계는 이 격자에 맞춥니다
+
+
+def heave_omega0(radius, draft):
+    """부력 기준 상하동요 고유진동수(부가질량 제외) sqrt(g / (draft + 2 radius / 3)) [rad/s]."""
+    return math.sqrt(GRAVITY / (draft + 2.0 * radius / 3.0))
+
+
+def adaptive_omegas(radius, draft, omega_max=None):
+    """적응형 주파수 목록(rad/s, 오름차순). 공진 구간이 상한 안에 없으면 균일 격자(``omega_grid``)와 같습니다."""
+    n_points, _ = omega_grid(omega_max)
+    omega_max = OMEGA_MIN + (n_points - 1) * OMEGA_STEP
+    w0 = heave_omega0(radius, draft)
+
+    def snap(value):
+        return round(value / _LATTICE) * _LATTICE
+
+    lo = snap(max(OMEGA_MIN, FREQ_GRID_LO * w0))
+    hi = snap(min(omega_max, FREQ_GRID_HI * w0))
+    tail_from = snap(FREQ_GRID_TAIL_RATIO * w0)
+    points = set()
+    for k in range(n_points):
+        w = OMEGA_MIN + k * OMEGA_STEP
+        if lo < w < hi:
+            continue
+        if w > tail_from:
+            j = (w - OMEGA_MIN) / FREQ_GRID_TAIL_STEP
+            if abs(j - round(j)) > 1e-6:
+                continue
+        points.add(round(w, 6))
+    if lo < hi:
+        n_fine = round((hi - lo) / FREQ_GRID_FINE_STEP)
+        points.update(round(lo + k * FREQ_GRID_FINE_STEP, 6) for k in range(n_fine + 1))
+    return sorted(points)
+
+
+def check_freq_grid(freq_grid):
+    """FreqGrid 값을 검증합니다 (0: 균일, 1: 적응형)."""
+    if isinstance(freq_grid, bool) or not isinstance(freq_grid, int) or freq_grid not in (0, 1):
+        raise ValueError(f"FreqGrid must be 0 (uniform) or 1 (adaptive), got {freq_grid}")
+    return freq_grid
+
+
 def check_solver(solver):
     """ISOLVE 값을 검증합니다 (0 이상의 정수)."""
     if isinstance(solver, bool) or not isinstance(solver, int) or solver < 0:
@@ -94,7 +146,9 @@ def write_wamit_inputs(vector, config, workspace_dir, positions=None):
     solver = DEFAULT_SOLVER if config.get("solver") is None else check_solver(config["solver"])
 
     # 4. POT 파일 작성
-    write_pot_file(workspace_dir, body_positions, config)
+    freq_grid = check_freq_grid(config.get("freq_grid") or 0)
+    omegas = adaptive_omegas(radius, draft, config.get("omega_max")) if freq_grid else None
+    write_pot_file(workspace_dir, body_positions, config, omegas)
 
     # 5. FRC 파일 작성
     write_frc_file(workspace_dir, len(body_positions))
@@ -129,7 +183,8 @@ def write_gdf_if_needed(gdf_path, radius, draft, target_panels):
         json.dump(mesh_meta, f, indent=2)
 
 
-def write_pot_file(workspace_dir, positions, config):
+def write_pot_file(workspace_dir, positions, config, omegas=None):
+    """``omegas``가 있으면 그 목록(rad/s)을 쓰고, 없으면 균일 격자를 씁니다."""
     depth = config["depth"]
     n_omega, _ = omega_grid(config.get("omega_max"))
 
@@ -137,8 +192,13 @@ def write_pot_file(workspace_dir, positions, config):
         f.write("WEC Optimization Array Analysis\n")
         f.write(f"{depth:<20} HBOT\n")
         f.write(f"{'0 0':<20} IRAD IDIFF\n")
-        f.write(f"{-n_omega:<20} NPER\n")
-        f.write(f"{f'{OMEGA_MIN:g} {OMEGA_STEP:g}':<20} PER\n")
+        if omegas is None:
+            f.write(f"{-n_omega:<20} NPER\n")  # 음수: 시작값과 간격으로 정의하는 균일 격자
+            f.write(f"{f'{OMEGA_MIN:g} {OMEGA_STEP:g}':<20} PER\n")
+        else:
+            f.write(f"{len(omegas):<20} NPER\n")  # 양수: 주파수 [rad/s] 목록 (IPERIN=2)
+            for w in omegas:
+                f.write(f"{w:.6f}\n")
         f.write(f"{'1':<20} NBETA\n")
         f.write(f"{'0':<20} BETA\n")
         f.write(f"{len(positions):<20} NBODY\n")
