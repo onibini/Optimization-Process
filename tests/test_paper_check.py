@@ -65,7 +65,7 @@ class TestPower(unittest.TestCase):
         config = check.build_config(CFG, "Buan")
         rao = synthetic_rao()
         total, individual = calculate_power(rao, config)
-        got = check.powers(rao, config, check.SPECS["goda"], "simpson")
+        got = check.powers(rao, config, config["wave_spec"], "simpson")
         np.testing.assert_allclose(got, individual, rtol=1e-12)
         self.assertAlmostEqual(sum(got), total, places=6)
 

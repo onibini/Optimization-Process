@@ -64,6 +64,7 @@ pip install -r requirements.txt
 ### 2. Configure Optimization
 Edit the [config.cfg](config.cfg) file to adjust the simulation parameters. Each line is `value  name  - comment`. You can change:
 - **Optimization Mode** (`OptMode`): 1 (Geometry), 2 (Layout), 3 (Both)
+- **Wave spectrum** (`WaveSpec`): 1 JONSWAP ITTC form (default), 2 JONSWAP Goda form (about 4% too high Hs, kept for comparison), 3 Pierson-Moskowitz.
 - **Algorithm** (`Algorithm`): 1 (DE), 2 (PSO), 3 (GA), 4 (CMA-ES), 5 (DEPSO: uses F, CR, w, c1, c2)
 - **WEC Count** (`NumWECs`): 1, 3, or 5
 - **WEC Parameters** & boundary constraints.

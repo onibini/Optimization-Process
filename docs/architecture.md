@@ -47,7 +47,7 @@ This project is a scientific optimization framework written in Python. It optimi
 │   │   ├── mesh_axisymmetric_shape.py # Cylinder + hemisphere 1/4-model GDF mesh (cubed-sphere hemisphere, panel count set by MeshPanels)
 │   │   ├── rao_calc.py        # Parses WAMIT output files (.out, .hst, .1, .3) to extract RAO matrices
 │   │   ├── power_calc.py      # Calculates power output using wave spectrum integrations
-│   │   └── wave_spectrum.py   # Generates JONSWAP wave spectrum density distributions
+│   │   └── wave_spectrum.py   # Wave spectra: JONSWAP (ITTC, Goda) and Pierson-Moskowitz
 │   │
 │   └── utils/                 # Utilities and helper modules
 │       ├── config_parser.py   # Parses config.cfg ("value name - comment"), supports negative values

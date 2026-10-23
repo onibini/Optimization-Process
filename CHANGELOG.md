@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-23 — 파랑 스펙트럼 기본값을 JONSWAP ITTC로, Pierson-Moskowitz 추가
+보고서: [docs/reports/2026-10-23_14_wave-spectrum-default.md](docs/reports/2026-10-23_14_wave-spectrum-default.md)
+
+#### Changed
+- `config.cfg` `WaveSpec` 기본 2(Goda) → **1(ITTC)**. 같은 설계의 발전량이 약 8% 낮아짐(논문 수치와 일치). `main.py`가 `WaveSpec`을 검증.
+
+#### Added
+- `WaveSpec=3` Pierson-Moskowitz(Bretschneider 형식). `tests/test_wave_spectrum.py`(7건).
+
 ### 2026-10-23 — CMA-ES 변수별 최소 탐색 폭 시험과 3개 해역 재제출
 보고서: [docs/reports/2026-10-23_13_cmaes-minstd-and-rerun.md](docs/reports/2026-10-23_13_cmaes-minstd-and-rerun.md)
 

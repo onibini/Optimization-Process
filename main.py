@@ -11,6 +11,7 @@ from src.physics.wamit_handler import (
     check_solver,
     omega_grid,
 )
+from src.physics.wave_spectrum import DEFAULT_WAVE_SPEC, WAVE_SPECTRA, check_wave_spec
 from src.problems import (
     evaluate_joint,
     evaluate_layout,
@@ -64,7 +65,11 @@ def main(cfg_path="config.cfg"):
     # 2. Separate sections
     opt_mode = int(cfg["Simulation"]["OptMode"])
     algo_type = int(cfg["Simulation"]["Algorithm"])
-    wave_spec = int(cfg["Simulation"]["WaveSpec"])
+    try:
+        wave_spec = check_wave_spec(int(cfg["Simulation"].get("WaveSpec", DEFAULT_WAVE_SPEC)))
+    except ValueError as err:
+        print(f"Error: {err}")
+        sys.exit(1)
     num_wecs = int(cfg["WEC Parameters"]["NumWECs"])
 
     # 3. OptMode에 따른 문제 세팅
@@ -75,7 +80,7 @@ def main(cfg_path="config.cfg"):
     env_data = load_env_data(site_id)
     print(
         f"해양 환경: [{env_data['SiteName']}] - Hs: {env_data['Hs']} m, "
-        f"Tp: {env_data['Tp']} s, Depth: {env_data['Depth']} m"
+        f"Tp: {env_data['Tp']} s, Depth: {env_data['Depth']} m, Spectrum: {WAVE_SPECTRA[wave_spec]}"
     )
 
     # 4. WAMIT 설정 로드

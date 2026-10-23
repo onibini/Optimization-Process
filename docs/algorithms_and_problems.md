@@ -18,7 +18,7 @@ For valid configurations, the evaluation runs a boundary element method solver (
 3. **RAO & Power Calculation**:
    - $B_{\text{PTO},k}$ is set to the radiation damping $B_{kk}(\omega_n)$ at the peak frequency of the uncontrolled RAO of body $k$.
    - Solve the equations of motion with this PTO to obtain Response Amplitude Operators (RAO).
-   - Integrate the power extraction across the selected wave spectrum (JONSWAP, ITTC or Goda form) with Simpson's rule.
+   - Integrate the power extraction across the selected wave spectrum (`WaveSpec`: 1 JONSWAP ITTC form, default; 2 JONSWAP Goda form, whose integral gives an Hs about 4% too high at gamma 1.4; 3 Pierson-Moskowitz in the Hs-Tp (Bretschneider) form) with Simpson's rule.
 
 ---
 
