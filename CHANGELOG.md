@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-24 — 새 CMA-ES(경계 벌점)로 부안 재계산(분석)
+보고서: [docs/reports/2026-10-24_04_cmaes-buan-rerun.md](docs/reports/2026-10-24_04_cmaes-buan-rerun.md)
+
+#### Notes
+- 부안 45.68 kW로 이전 CMA-ES(44.89 kW)보다 1.8% 높지만 논문 DE 설계(50.02 kW)보다 8.7% 낮음. 이전과 같이 35세대에 정체(캐시 적중 89%)하여, 경계 처리가 정체의 주원인이라는 보고서 02의 추정은 맞지 않음. 벽 옆 한 줄 배치 영역은 탐색하지 않음(코드 변경 없음).
+
 ### 2026-10-24 — CMA-ES 경계 처리를 표준 벌점 방식으로 변경
 보고서: [docs/reports/2026-10-24_03_cmaes-bound-penalty.md](docs/reports/2026-10-24_03_cmaes-bound-penalty.md)
 
