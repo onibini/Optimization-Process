@@ -32,6 +32,23 @@ class TestAlgorithmBenchmark(unittest.TestCase):
         rotated = bench.run_task(("de", "sphere", 4, 50, 0, 300, True))
         self.assertFalse(np.array_equal(plain, rotated))
 
+    def test_bounded_variant_moves_the_minimizer_outside_the_box(self):
+        _, lo, hi = bench.FUNCTIONS["sphere"]
+        x = bench.bounded_minimizer("sphere", 4)
+        self.assertGreater(x[0], hi)
+        self.assertLess(x[1], lo)
+        self.assertEqual(x[2], 0.0)
+        self.assertGreater(x[3], hi)
+        best = bench.run_task(("cmaes", "sphere", 4, 50, 0, 400, False, True))
+        self.assertGreater(best[-1], 0.0)  # the minimum (0) is outside the box
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            args = ["--algorithms", "cmaes", "cmaes_clip", "--functions", "sphere", "--dims", "3", "--seeds", "2"]
+            args += ["--budget", "300", "--grid", "50", "--workers", "1", "--bounded"]
+            finals, _ = bench.main([*args, "--out", tmp])
+        regrets = np.concatenate(list(finals.values()))
+        self.assertTrue(np.all(regrets >= 0))
+        self.assertEqual(regrets.min(), 0.0)  # regret against the best run
+
     def test_reproducible_and_no_log_files(self):
         cwd = os.getcwd()
         with tempfile.TemporaryDirectory() as tmp:

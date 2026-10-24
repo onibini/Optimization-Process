@@ -6,10 +6,17 @@ maximize, so they receive ``-f``. The variables lie on a lattice of ``--grid`` s
 0.1 m grid). The budget is the number of calls of the evaluation function, i.e. the number of WAMIT runs in a real
 optimization (cache hits are free); every run stops when it reaches ``--budget`` calls. DEPSO evaluates one trial
 per particle like DE. ``depso`` is the default greedy rule; ``depso_pbest``, ``depso_pbest_c1zero`` and
-``depso_move`` are the comparison variants.
+``depso_move`` are the comparison variants. ``cmaes`` uses the default boundary handling (penalty) and ``cmaes_clip``
+the earlier one (updates with the clipped samples).
+
+With ``--bounded`` the minimizer is moved outside the search box for two thirds of the variables (10% of the range
+beyond the upper bound for k % 3 == 0, beyond the lower bound for k % 3 == 1), so the best feasible point lies on the
+boundary, as in the WEC problem (largest radius, closest to the wall). The reported value is then the regret: the
+function value minus the best value found by any run of the study for that function and dimension.
 
     python scripts/experiments/algorithm_benchmark.py --plot
     python scripts/experiments/algorithm_benchmark.py --algorithms de depso --dims 7 --seeds 5 --budget 5000
+    python scripts/experiments/algorithm_benchmark.py --algorithms cmaes cmaes_clip de --bounded --grid 0 --dims 7
 
 Results: ``<out>/algorithm_final.csv`` (best value of every run), ``<out>/algorithm_curves.csv`` (median and quartiles
 of the best value against the number of calls) and, with ``--plot`` (needs matplotlib), PNG figures. The optimizer log
@@ -60,7 +67,8 @@ ALGORITHMS = {
         100,
     ),
     "depso_move": (depso, "run_depso", {"F": 0.5, "CR": 0.9, "w": 0.5, "c1": 1.5, "c2": 1.5, "update": "move"}, 100),
-    "cmaes": (cma_es, "run_cma_es", {"sigma_init": 0.3}, 72),
+    "cmaes": (cma_es, "run_cma_es", {"sigma_init": 0.3}, 72),  # default (boundary penalty)
+    "cmaes_clip": (cma_es, "run_cma_es", {"sigma_init": 0.3, "boundary": "clip"}, 72),
     "cmaes_minstd0.3": (cma_es, "run_cma_es", {"sigma_init": 0.3, "min_std_factor": 0.3}, 72),
     "cmaes_minstd0.5": (cma_es, "run_cma_es", {"sigma_init": 0.3, "min_std_factor": 0.5}, 72),
     "cmaes_minstd1": (cma_es, "run_cma_es", {"sigma_init": 0.3, "min_std_factor": 1.0}, 72),
@@ -99,17 +107,32 @@ def rotation(dims):
     return q * np.sign(np.diag(r))
 
 
+def bounded_minimizer(name, dims):
+    """Minimizer of the ``--bounded`` variant: outside the box for k % 3 == 0 (above) and k % 3 == 1 (below)."""
+    _, lo, hi = FUNCTIONS[name]
+    x = np.full(dims, OPTIMA.get(name, 0.0))
+    k = np.arange(dims)
+    x[k % 3 == 0] = hi + 0.1 * (hi - lo)
+    x[k % 3 == 1] = lo - 0.1 * (hi - lo)
+    return x
+
+
 def run_task(task):
     """One optimization run; returns the best value (minimization) after every evaluation call, padded to the budget.
 
-    ``task = (algorithm, function, dims, grid, seed, budget[, rotate])``; with ``rotate`` the function is evaluated at
-    ``Q (x - x*) + x*`` (same minimum, variables coupled).
+    ``task = (algorithm, function, dims, grid, seed, budget[, rotate[, bounded]])``; with ``rotate`` the function is
+    evaluated at ``Q (x - x*) + x*`` (same minimum, variables coupled); with ``bounded`` the minimizer x* is moved
+    outside the box (``bounded_minimizer``) and the function is evaluated at ``Q (x - x*) + x0*`` (``x0*``: the
+    original minimizer).
     """
     algo, name, dims, grid, seed, budget, *rest = task
     rotate = bool(rest and rest[0])
+    bounded = bool(len(rest) > 1 and rest[1])
     module, runner, kwargs, pop = ALGORITHMS[algo]
     func, lo, hi = FUNCTIONS[name]
-    q, x_star = rotation(dims), OPTIMA.get(name, 0.0)
+    q = rotation(dims) if rotate else np.eye(dims)
+    x_orig = OPTIMA.get(name, 0.0)
+    x_star = bounded_minimizer(name, dims) if bounded else x_orig
     config = {
         "dimensions": dims,
         "bounds": [[lo] * dims, [hi] * dims],
@@ -122,8 +145,8 @@ def run_task(task):
 
     def evaluate(vector, config):
         x = np.asarray(vector, dtype=float)
-        if rotate:
-            x = q @ (x - x_star) + x_star
+        if rotate or bounded:
+            x = q @ (x - x_star) + x_orig
         value = float(func(x[np.newaxis, :])[0])
         best.append(min(value, best[-1]) if best else value)
         if len(best) >= budget:
@@ -157,6 +180,7 @@ def plot(curves, finals, algorithms, functions, dims_list, budget, out):
         "depso_pbest_c1zero": "#f1c40f",
         "depso_move": "#16a085",
         "cmaes": "#8e44ad",
+        "cmaes_clip": "#b9770e",
         "cmaes_minstd0.3": "#5dade2",
         "cmaes_minstd0.5": "#1abc9c",
         "cmaes_minstd1": "#d35400",
@@ -177,7 +201,7 @@ def plot(curves, finals, algorithms, functions, dims_list, budget, out):
             ax.set_ylabel("best f (median, quartiles)")
             ax.grid(alpha=0.3)
         axes.flat[0].legend(fontsize=8)
-        fig.suptitle(f"Project optimizers, D = {dims}, equal budget {budget} evaluations")
+        fig.suptitle(f"Project optimizers, D = {dims}, equal budget {budget} evaluations")  # (regret with --bounded)
         fig.tight_layout()
         path = os.path.join(out, f"algorithm_curves_D{dims}.png")
         fig.savefig(path, dpi=120)
@@ -215,6 +239,7 @@ def main(argv=None):
     parser.add_argument("--seeds", type=int, default=30)
     parser.add_argument("--budget", type=int, default=30000, help="evaluation calls per run")
     parser.add_argument("--rotate", action="store_true", help="rotated (non-separable) test functions")
+    parser.add_argument("--bounded", action="store_true", help="minimizer outside the box (best point on the boundary)")
     parser.add_argument("--workers", type=int, default=0, help="processes (0: all CPU cores, 1: no parallelism)")
     parser.add_argument("--out", default="logs")
     parser.add_argument("--plot", action="store_true")
@@ -222,7 +247,7 @@ def main(argv=None):
 
     os.makedirs(args.out, exist_ok=True)
     tasks = [
-        (algo, name, dims, args.grid, seed, args.budget, args.rotate)
+        (algo, name, dims, args.grid, seed, args.budget, args.rotate, args.bounded)
         for algo, name, dims, seed in itertools.product(args.algorithms, args.functions, args.dims, range(args.seeds))
     ]
     start = time.time()
@@ -233,6 +258,12 @@ def main(argv=None):
     else:
         results = [run_task(task) for task in tasks]
     print(f"{len(tasks)} runs on {workers} processes in {time.time() - start:.0f} s", flush=True)
+    if args.bounded:  # regret against the best value found by any run for the same function and dimension
+        reference = {}
+        for task, best in zip(tasks, results, strict=True):
+            key = (task[1], task[2])
+            reference[key] = min(reference.get(key, np.inf), best[-1])
+        results = [best - reference[(task[1], task[2])] for task, best in zip(tasks, results, strict=True)]
 
     marks = np.linspace(args.budget / CHECKPOINTS, args.budget, CHECKPOINTS).astype(int) - 1
     grouped = {}
@@ -240,7 +271,7 @@ def main(argv=None):
         writer = csv.writer(f)
         writer.writerow(["algorithm", "function", "dims", "grid", "seed", "best", "budget"])
         for task, best in zip(tasks, results, strict=True):
-            algo, name, dims, grid, seed, budget, _ = task
+            algo, name, dims, grid, seed, budget, *_ = task
             writer.writerow([algo, name, dims, grid, seed, f"{best[-1]:.6e}", budget])
             grouped.setdefault((algo, name, dims), []).append(best[marks])
     finals, curves = {}, {}

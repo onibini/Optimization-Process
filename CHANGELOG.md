@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-24 — CMA-ES 경계 처리를 표준 벌점 방식으로 변경
+보고서: [docs/reports/2026-10-24_03_cmaes-bound-penalty.md](docs/reports/2026-10-24_03_cmaes-bound-penalty.md)
+
+#### Changed
+- CMA-ES가 범위 밖 샘플을 고친 점에서 평가하고, 분포 갱신에는 원래 샘플을 쓰며, 경계 밖 거리만큼 벌점을 줌(`BoundPenalty`, Hansen et al. 2009 / pycma 4.x 규칙). 이전 방식은 `run_cma_es(..., boundary="clip")`. CMA-ES 결과가 이전과 달라짐.
+
+#### Added
+- `algorithm_benchmark.py`: `--bounded`(최소점이 상자 밖, regret 보고), `cmaes_clip`. `tests/test_cma_es_boundary.py`(8건).
+
 ### 2026-10-24 — CMA-ES 세 해역 동시최적화 결과(분석)
 보고서: [docs/reports/2026-10-24_02_cmaes-sites-result.md](docs/reports/2026-10-24_02_cmaes-sites-result.md)
 
