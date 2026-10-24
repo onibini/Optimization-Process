@@ -205,7 +205,7 @@
 | `RAMGBMAX` | 16 | WAMIT 메모리 한도 (GB) |
 | `WAMITPath` | (없음) | WAMIT 실행 파일 경로 (선택) |
 | `MeshPanels` | 120 | WEC 1기당 1/4 모델 패널 수. 5기 배열에서 대부분 총 발전량 0.5% 이내입니다. 가늘고 긴 형상(작은 R, 큰 D)이나 촘촘한 배치는 160 이상, 1기는 150~250을 권장합니다. 계산 시간은 패널 수의 약 2.5~3제곱으로 늘어납니다. |
-| `Solver` | 0 | 0 반복 솔버(빠르고 메모리 적음), 1 직접 솔버, N ≥ 2 블록 반복 솔버 |
+| `Solver` | 0 | 0 반복 솔버(빠르고 메모리 적음), 1 직접 솔버, N ≥ 2 블록 반복 솔버. 5기 배열에서 결과는 0.001% 안쪽으로 같고, 0이 가장 빠릅니다(직접 솔버보다 메쉬 120에서 약 1.9배, 180에서 약 2.5배). |
 | `OmegaMax` | 3.0 | 주파수 격자 상한 (rad/s). 격자는 0.5 rad/s부터 0.05 간격입니다. 작은 부표는 높은 주파수에서 공진하므로, 탐색 범위에 작은 부표가 있으면 3.0 이상을 유지하세요. |
 | `FreqGrid` | 0 | 0 균일 격자, 1 공진 부근만 촘촘한 적응형 격자. 1은 좁은 공진을 정확히 잡지만(오차 약 0.1% 이내) 평가 시간이 1.5~2.5배입니다. |
 | `Workers` | 1 | 동시에 실행하는 WAMIT 수. `Workers × NCPU`가 PC 코어 수를 넘지 않게 맞춥니다(예: 8코어면 2 × 4). |
@@ -288,6 +288,7 @@ Algorithm: [Differential Evolution]
 | `experiments/parallel_wamit_bench.py` | 필요 | `Workers × NCPU` 조합별 처리 속도 측정 |
 | `experiments/run_sites.py` | 필요 | 같은 설정으로 여러 해역을 차례로 실행 (`--sites 1 2 3`) |
 | `experiments/freq_grid_study.py` | 필요 | 주파수 격자에 따른 정확도·시간 비교 |
+| `experiments/solver_timing.py` | 필요 | 5기 설계에서 WAMIT 선형 솔버(`Solver`)별 시간·발전량·반복 횟수 비교 |
 | `experiments/paper_check.py` | 필요 | 발표된 최적해(Lee 등)를 다시 계산하고, `--reference`로 코드 변경 전후 결과를 비교 |
 | `experiments/algorithm_benchmark.py` | 불필요 | 최적화 알고리즘을 벤치마크 함수로 비교 (`--rotate`, `--plot`) |
 | `remote.ps1` | 필요 | (선택) SSH로 다른 Windows PC에 계산을 보내고 결과를 받아오기. 설정 방법은 [remote_compute.md](remote_compute.md) |

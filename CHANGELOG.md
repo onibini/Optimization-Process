@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-25 — WAMIT 선형 솔버(Solver 0, 1, 2, 5) 시간·결과 비교
+보고서: [docs/reports/2026-10-25_01_wamit-solver-timing.md](docs/reports/2026-10-25_01_wamit-solver-timing.md)
+
+#### Added
+- `scripts/experiments/solver_timing.py`: 5기 설계·해역·메쉬별로 `Solver`마다 평가 시간, 출력, 최대 반복 횟수를 비교. `tests/test_solver_timing.py`(3건).
+
+#### Notes
+- 80회 모두 총 출력 차이 0.00024% 이하. 반복 솔버(0)가 직접 솔버보다 메쉬 120에서 1.88배, 180에서 2.54배 빠르고, 블록 반복 솔버(2, 5)는 반복 횟수가 적지만 0보다 느림. 기본값 `Solver` 0 유지. `docs/manual_ko.md`에 결과와 도구 추가.
+
 ### 2026-10-24 — 새 CMA-ES(경계 벌점)로 부안 재계산(분석)
 보고서: [docs/reports/2026-10-24_04_cmaes-buan-rerun.md](docs/reports/2026-10-24_04_cmaes-buan-rerun.md)
 
