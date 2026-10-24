@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-24 — CMA-ES 세 해역 동시최적화 결과(분석)
+보고서: [docs/reports/2026-10-24_02_cmaes-sites-result.md](docs/reports/2026-10-24_02_cmaes-sites-result.md)
+
+#### Notes
+- CMA-ES(72 × 300, σ0 0.3, ITTC): 부안 44.89, 칠발도 28.43, 영일만항 33.04 kW로 논문 DE 설계보다 7.8~10.3% 낮음. 4~66세대에 정체했고, 평가 설계의 93~96%가 경계에 붙음. 잘린 샘플로 분포를 갱신하는 경계 처리가 원인으로 보임(코드 변경 없음).
+
 ### 2026-10-24 — 5기 배열 상호작용 항 비교(WAMIT 대 Capytaine)
 보고서: [docs/reports/2026-10-24_01_interaction-terms.md](docs/reports/2026-10-24_01_interaction-terms.md)
 
