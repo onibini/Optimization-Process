@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 2026-10-26 — DE 세 해역 동시최적화 결과(분석)
+보고서: [docs/reports/2026-10-26_01_de-sites-result.md](docs/reports/2026-10-26_01_de-sites-result.md)
+
+#### Notes
+- DE(72 × 300, ITTC): 부안 47.23, 칠발도 30.15, 영일만항(13 m) 33.43 kW로 CMA-ES보다 1.2~6.0% 높고 논문 DE 설계보다 4.9~6.7% 낮음. 29~83세대에 정체. 바깥 쌍(X3)이 벽 옆인 설계를 해역마다 1~2개만 평가했고, DE 최적해에서 X3만 3 m로 바꾸면 부안 +3.7%, 영일만항 +5.8%(칠발도 −0.9%)여서 남은 차이는 탐색 부족으로 봄(코드 변경 없음).
+
 ### 2026-10-25 — WAMIT 선형 솔버(Solver 0, 1, 2, 5) 시간·결과 비교
 보고서: [docs/reports/2026-10-25_01_wamit-solver-timing.md](docs/reports/2026-10-25_01_wamit-solver-timing.md)
 
