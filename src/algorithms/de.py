@@ -38,7 +38,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
     best_x, best_f, best_p = None, -np.inf, []
     gens_done = 0
     try:
-        print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
+        print(f"Optimization started: evaluating the initial population of {pop_size}...")
         fitness = []
         ind_powers_pop = []
         progress.start(0, pop_size)

@@ -235,16 +235,16 @@ SiteID,SiteName,Hs,Tp,Gamma,Depth
 ## 6. 실행 중 화면 읽기
 
 ```
-해양 환경: [Yeongilmanhang] - Hs: 0.92 m, Tp: 6.66 s, Depth: 13.0 m, Spectrum: JONSWAP (ITTC)
+Sea state: [Yeongilmanhang] - Hs: 0.92 m, Tp: 6.66 s, Depth: 13.0 m, Spectrum: JONSWAP (ITTC)
 WAMIT: Solver=0, 51 frequencies up to 3 rad/s, MeshPanels=120
 Algorithm: [Differential Evolution]
-최적화 시작: 초기 개체군 72개 평가 중...
+Optimization started: evaluating the initial population of 72...
 Init        [████████████████████] 100% 72/72 | Best   16.5534 kW   |  9:41 | WAMIT    54  Hits     0  Penalty    18
 Gen   1/300 [████████████████████] 100% 72/72 | Best   21.2556 kW ▲ |  8:03 | WAMIT    90  Hits     0  Penalty    54
 Gen   2/300 [███████████▋        ]  58% 42/72 | Best   21.2556 kW   |  3:10
 ```
 
-세대마다 한 줄이 남고, 계산 중인 세대는 맨 아래 줄의 막대가 개체(설계) 하나를 평가할 때마다 채워집니다.
+화면 출력과 오류 메시지는 어느 PC에서 열어도 깨지지 않도록 영어로 씁니다. 세대마다 한 줄이 남고, 계산 중인 세대는 맨 아래 줄의 막대가 개체(설계) 하나를 평가할 때마다 채워집니다.
 세대 번호와 개수는 최대 자릿수에 맞춰 오른쪽 정렬되므로 1세대와 100세대의 칸이 같습니다.
 
 | 항목 | 뜻 |

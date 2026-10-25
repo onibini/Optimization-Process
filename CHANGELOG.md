@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-10-26 — 화면 출력·오류 메시지를 영어로
+보고서: [docs/reports/2026-10-26_03_english-console-output.md](docs/reports/2026-10-26_03_english-console-output.md)
+
+#### Changed
+- `main.py`, `src/`, `scripts/`의 `print`·경고·예외 문장 23곳을 영어로 바꿈(예: `Sea state: ...`, `Optimization started: evaluating the initial population of 72...`, 설정 검증 오류). 계산용 PC의 `run.log`를 `remote.ps1 tail`로 볼 때 한국어가 깨지던 문제를 피함. 주석·docstring과 CSV·JSON 로그는 그대로.
+
+#### Added
+- `tests/test_english_output.py`: docstring이 아닌 문자열 상수에 한글이 있으면 실패. `docs/conventions.md` 4절(출력 언어).
+
 ### 2026-10-26 — 세대 진행 막대
 보고서: [docs/reports/2026-10-26_02_generation-progress-bar.md](docs/reports/2026-10-26_02_generation-progress-bar.md)
 

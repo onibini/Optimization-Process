@@ -15,10 +15,10 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     results_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(root, "results")
     if not os.path.isdir(results_dir):
-        print(f"results 폴더가 없습니다: {results_dir}")
+        print(f"No results folder: {results_dir}")
         return 1
     path, count = write_summary_csv(results_dir)
-    print(f"{count}개 실행을 요약했습니다: {path}")
+    print(f"Summarized {count} runs: {path}")
     return 0
 
 

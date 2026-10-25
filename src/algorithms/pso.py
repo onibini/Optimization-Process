@@ -48,7 +48,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     gbest_position, gbest_fitness, gbest_powers = None, -np.inf, []
     gens_done = 0
     try:
-        print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
+        print(f"Optimization started: evaluating the initial swarm of {pop_size}...")
         pbest_positions = positions.copy()
         pbest_fitness = np.zeros(pop_size)
         pbest_powers = []

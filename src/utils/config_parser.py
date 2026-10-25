@@ -33,18 +33,16 @@ def parse_wec_cfg(filepath):
                 continue
 
             if current_section is None:
-                raise ConfigParseError(f"{filepath}:{line_no}: 섹션([...]) 밖에 값이 정의되어 있습니다: {line!r}")
+                raise ConfigParseError(f"{filepath}:{line_no}: value defined outside a [section]: {line!r}")
 
             tokens = line.split()
             if len(tokens) < 2:
-                raise ConfigParseError(f"{filepath}:{line_no}: '값 변수명' 형식이 아닙니다: {line!r}")
+                raise ConfigParseError(f"{filepath}:{line_no}: expected 'value name': {line!r}")
 
             val_str, key_str = tokens[0], tokens[1]
             section = config_dict[current_section]
             if key_str in section:
-                raise ConfigParseError(
-                    f"{filepath}:{line_no}: [{current_section}] 섹션에 '{key_str}'가 중복 정의되었습니다."
-                )
+                raise ConfigParseError(f"{filepath}:{line_no}: '{key_str}' is defined twice in [{current_section}]")
             section[key_str] = val_str
 
     return config_dict

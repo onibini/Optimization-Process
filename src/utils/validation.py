@@ -20,9 +20,9 @@ def _to_float(name, value):
     try:
         number = float(value)
     except (TypeError, ValueError):
-        raise ConfigValidationError(f"'{name}' 값이 숫자가 아닙니다: {value!r}") from None
+        raise ConfigValidationError(f"'{name}' is not a number: {value!r}") from None
     if not math.isfinite(number):
-        raise ConfigValidationError(f"'{name}' 값이 유한한 숫자가 아닙니다: {value!r}")
+        raise ConfigValidationError(f"'{name}' is not a finite number: {value!r}")
     return number
 
 
@@ -30,7 +30,7 @@ def require_positive(name, value):
     """value > 0 인지 확인하고 float로 반환합니다."""
     number = _to_float(name, value)
     if number <= 0:
-        raise ConfigValidationError(f"'{name}'는 양수(> 0)여야 합니다. 현재 값: {number}")
+        raise ConfigValidationError(f"'{name}' must be positive (> 0), got {number}")
     return number
 
 
@@ -40,17 +40,17 @@ def validate_design_bounds(names, lower_bounds, upper_bounds):
     :param names: 변수 이름 목록 (에러 메시지용, 예: ["RadiusMin/RadiusMax", ...])
     """
     if not (len(names) == len(lower_bounds) == len(upper_bounds)):
-        raise ConfigValidationError("설계 변수 이름/하한/상한의 개수가 서로 다릅니다.")
+        raise ConfigValidationError("Design variable names, lower bounds and upper bounds differ in length.")
 
     errors = []
     for name, lo, hi in zip(names, lower_bounds, upper_bounds, strict=True):
         lo_f, hi_f = _to_float(f"{name} (min)", lo), _to_float(f"{name} (max)", hi)
         if lo_f <= 0:
-            errors.append(f"  - {name}: 하한 {lo_f}은(는) 양수(> 0)여야 합니다.")
+            errors.append(f"  - {name}: lower bound {lo_f} must be positive (> 0)")
         if hi_f <= lo_f:
-            errors.append(f"  - {name}: 상한 {hi_f}은(는) 하한 {lo_f}보다 커야 합니다.")
+            errors.append(f"  - {name}: upper bound {hi_f} must be greater than the lower bound {lo_f}")
     if errors:
-        raise ConfigValidationError("설계 변수 탐색 범위가 올바르지 않습니다:\n" + "\n".join(errors))
+        raise ConfigValidationError("Invalid design variable bounds:\n" + "\n".join(errors))
 
 
 def resolve_step_sizes(constraints_dict, names, lower_bounds, upper_bounds):
@@ -75,18 +75,18 @@ def resolve_step_sizes(constraints_dict, names, lower_bounds, upper_bounds):
         elif has_default:
             step = require_positive("StepSize", constraints_dict["StepSize"])
         else:
-            raise ConfigValidationError(f"'{key}' 또는 공통 'StepSize' 중 하나는 지정해야 합니다.")
+            raise ConfigValidationError(f"Either '{key}' or the common 'StepSize' must be set.")
 
         span = float(hi) - float(lo)
         ratio = span / step
         n_steps = math.floor(ratio + _GRID_TOLERANCE * max(1.0, abs(ratio)))
         if n_steps < 1:
-            raise ConfigValidationError(f"'{key}' = {step}이(가) {name}의 탐색 범위 폭 {span:g}보다 큽니다.")
+            raise ConfigValidationError(f"'{key}' = {step} is larger than the search range of {name} ({span:g}).")
         if abs(ratio - round(ratio)) > _GRID_TOLERANCE * max(1.0, abs(ratio)):
             reachable_max = float(lo) + n_steps * step
             warnings.warn(
-                f"{name}: 범위 폭 {span:g}이(가) 간격 {step:g}로 나누어떨어지지 않아 "
-                f"실제 탐색 상한은 {reachable_max:g}입니다 (설정 상한 {float(hi):g}).",
+                f"{name}: the range {span:g} is not a multiple of the step {step:g}, "
+                f"so the reachable upper bound is {reachable_max:g} (configured {float(hi):g}).",
                 stacklevel=2,
             )
         steps.append(step)

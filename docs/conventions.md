@@ -64,3 +64,7 @@ To eliminate this redundancy, we apply `canonicalize_vector_inplace` to any tria
 This guarantees that the vector is always represented in its ascending sorted state, i.e., $(x_2, y_2) \le (x_3, y_3)$, which solves the caching and search-space redundancy.
 
 PSO, CMA-ES and DEPSO pass a canonicalized *copy* to the evaluator so their internal state (particle position/velocity, sampled points) is not reordered; their reported best designs are canonical.
+
+## 4. Console Output Language
+
+Everything the program prints or raises (`print`, warnings, exception messages in `main.py`, `src/`, `scripts/`) is written in English, so that `run.log` on the compute PC reads the same in any code page. Comments and docstrings may stay in Korean. `tests/test_english_output.py` fails if a non-docstring string literal contains Hangul.

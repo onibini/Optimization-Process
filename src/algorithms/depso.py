@@ -68,7 +68,7 @@ def run_depso(config, eval_func, pop_size, max_iter, F=0.5, CR=0.9, w=0.5, c1=1.
     gbest_position, gbest_fitness, gbest_powers = None, -np.inf, []
     gens_done = 0
     try:
-        print(f"최적화 시작: 초기 군집 {pop_size}개 평가 중...")
+        print(f"Optimization started: evaluating the initial swarm of {pop_size}...")
         fitness = np.zeros(pop_size)
         progress.start(0, pop_size)
         batch = evaluator.evaluate_batch([p.copy() for p in positions], on_result=progress.advance)

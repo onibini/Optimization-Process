@@ -171,7 +171,7 @@ def run_cma_es(
     best_x, best_f, best_p = None, -np.inf, []
     gens_done = 0
 
-    print(f"최적화 시작: 세대당 {lambda_}개 샘플, 최대 {max_iter}세대")
+    print(f"Optimization started: {lambda_} samples per generation, up to {max_iter} generations")
 
     try:
         # 2. 메인 루프

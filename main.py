@@ -41,7 +41,7 @@ def print_result(best_x, best_f, config):
     """최적 설계를 사람이 읽기 쉬운 형태로 출력합니다."""
     print("\n=== Optimization Finished ===")
     if best_x is None or not np.isfinite(best_f):
-        print("유효한 해를 찾지 못했습니다.")
+        print("No valid solution was found.")
         return
 
     best_x = np.asarray(best_x, dtype=float)
@@ -102,7 +102,7 @@ def main(cfg_path="config.cfg"):
     site_id = int(cfg["Environment"]["SiteID"])
     env_data = load_env_data(site_id)
     print(
-        f"해양 환경: [{env_data['SiteName']}] - Hs: {env_data['Hs']} m, "
+        f"Sea state: [{env_data['SiteName']}] - Hs: {env_data['Hs']} m, "
         f"Tp: {env_data['Tp']} s, Depth: {env_data['Depth']} m, Spectrum: {WAVE_SPECTRA[wave_spec]}"
     )
 
