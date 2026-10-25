@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 from src.algorithms.common import CachedEvaluator, OptimizationLogger, get_step_size, quantize_vector
+from src.algorithms.progress import GenerationProgress
 
 
 def _normalize_vector(vector, lower_bounds, bounds_range):
@@ -137,6 +138,7 @@ def run_cma_es(
     N = dimensions
     step_size = get_step_size(config)
     lambda_ = pop_size  # Offspring 수
+    progress = GenerationProgress(max_iter, lambda_)
     mu = lambda_ // 2  # 부모 수 (일반적으로 λ/2)
 
     # 가중치 및 실효 선택 질량
@@ -191,7 +193,9 @@ def run_cma_es(
                 # 평가용 사본: 격자 스냅 후 CachedEvaluator가 제자리에서 대칭 정렬함
                 eval_xs.append(quantize_vector(_denormalize_vector(candidate, lower_bounds, bounds_range), config))
 
-            for k, (eval_x, (score, p_list)) in enumerate(zip(eval_xs, evaluator.evaluate_batch(eval_xs), strict=True)):
+            progress.start(gen + 1, lambda_, best_f)
+            batch = evaluator.evaluate_batch(eval_xs, on_result=progress.advance)
+            for k, (eval_x, (score, p_list)) in enumerate(zip(eval_xs, batch, strict=True)):
                 fitness[k] = score
                 if score > best_f:
                     best_f = score
@@ -241,7 +245,7 @@ def run_cma_es(
             logger.write_generation(gen + 1, best_x, best_f, best_p, gen_time)
             gens_done = gen + 1
 
-            print(f" Gen {gen + 1} | Best: {best_f / 1000:,.4f} kW | {evaluator.progress_text()}")
+            progress.finish(best_f, evaluator)
     finally:
         logger.write_summary(best_x, best_f, best_p, evaluator, gens_done)
         logger.close()

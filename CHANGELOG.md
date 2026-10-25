@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### 2026-10-26 — 세대 진행 막대
+보고서: [docs/reports/2026-10-26_02_generation-progress-bar.md](docs/reports/2026-10-26_02_generation-progress-bar.md)
+
+#### Changed
+- 화면 출력: 개체 평가가 끝날 때마다 진행 막대를 갱신하고, 세대가 끝나면 `Gen   1/300 [###...] 100% 72/72 | Best ... kW ▲ | 8:03 | WAMIT ... Hits ... Penalty ...` 한 줄을 남김(세대 번호·개수를 최대 자릿수로 정렬). 파일·파이프 출력은 완성된 줄만 ASCII로 씀. "초기 세대 최적 발전량" 줄은 `Init` 줄로 바뀜. CSV·JSON 로그와 결과는 같음.
+- `CachedEvaluator.evaluate_batch(vectors, on_result=None)`: 벡터 하나의 값이 정해질 때마다 알림(`Workers > 1`은 끝난 순서). `progress_text()` 삭제.
+
+#### Added
+- `src/algorithms/progress.py`(`GenerationProgress`), `tests/test_progress.py`(8건).
+
 ### 2026-10-26 — DE 세 해역 동시최적화 결과(분석)
 보고서: [docs/reports/2026-10-26_01_de-sites-result.md](docs/reports/2026-10-26_01_de-sites-result.md)
 

@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 from src.algorithms.common import CachedEvaluator, OptimizationLogger, quantize_vector, random_grid_population
+from src.algorithms.progress import GenerationProgress
 
 
 def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
@@ -29,6 +30,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
     dimensions = config["dimensions"]
     logger = OptimizationLogger(config, algorithm="de")
     evaluator = CachedEvaluator(config, eval_func, logger)
+    progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 개체군 생성
     population = random_grid_population(pop_size, config)
@@ -39,7 +41,9 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
         print(f"최적화 시작: 초기 개체군 {pop_size}개 평가 중...")
         fitness = []
         ind_powers_pop = []
-        for score, p_list in evaluator.evaluate_batch(list(population)):  # 행 뷰라 제자리 정렬이 개체군에 반영됨
+        progress.start(0, pop_size)
+        # 행 뷰라 제자리 정렬이 개체군에 반영됨
+        for score, p_list in evaluator.evaluate_batch(list(population), on_result=progress.advance):
             fitness.append(score)
             ind_powers_pop.append(p_list)
 
@@ -49,11 +53,12 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
         best_f = fitness[best_idx]
         best_p = ind_powers_pop[best_idx]
 
-        print(f"초기 세대 최적 발전량: {best_f / 1000:,.4f} kW")
+        progress.finish(best_f, evaluator)
 
         # 2. 메인 루프
         for gen in range(max_iter):
             gen_start = time.time()
+            progress.start(gen + 1, pop_size, best_f)
 
             trials = []
             for i in range(pop_size):
@@ -75,6 +80,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
                     continue
 
                 score, p_list = evaluator.evaluate(trial)
+                progress.advance(score)
                 if score > fitness[i]:
                     fitness[i] = score
                     population[i] = trial
@@ -86,7 +92,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
 
             if update == "generation":
                 for i, (trial, (score, p_list)) in enumerate(
-                    zip(trials, evaluator.evaluate_batch(trials), strict=True)
+                    zip(trials, evaluator.evaluate_batch(trials, on_result=progress.advance), strict=True)
                 ):
                     if score > fitness[i]:
                         fitness[i] = score
@@ -100,7 +106,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
             logger.write_generation(gen + 1, best_x, best_f, best_p, gen_time)
             gens_done = gen + 1
 
-            print(f" Gen {gen + 1} | Best: {best_f / 1000:,.4f} kW | {evaluator.progress_text()}")
+            progress.finish(best_f, evaluator)
     finally:
         logger.write_summary(best_x, best_f, best_p, evaluator, gens_done)
         logger.close()

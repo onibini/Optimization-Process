@@ -31,6 +31,7 @@ This project is a scientific optimization framework written in Python. It optimi
 ├── src/
 │   ├── algorithms/            # Optimization algorithms (Metaheuristics)
 │   │   ├── common.py          # Shared CachedEvaluator, OptimizationLogger, grid quantization helpers
+│   │   ├── progress.py        # GenerationProgress: per-individual progress bar, one line per generation
 │   │   ├── de.py              # Differential Evolution (DE/rand/1/bin)
 │   │   ├── pso.py             # Particle Swarm Optimization (PSO)
 │   │   ├── ga.py              # Genetic Algorithm (GA)

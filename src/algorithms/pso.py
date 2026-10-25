@@ -10,6 +10,7 @@ from src.algorithms.common import (
     quantize_vector,
     random_grid_population,
 )
+from src.algorithms.progress import GenerationProgress
 
 
 def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
@@ -35,6 +36,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
     logger = OptimizationLogger(config, algorithm="pso")
     evaluator = CachedEvaluator(config, eval_func, logger)
+    progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 군집 생성
     positions = random_grid_population(pop_size, config)
@@ -51,7 +53,9 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
         pbest_fitness = np.zeros(pop_size)
         pbest_powers = []
 
-        for i, (score, p_list) in enumerate(evaluator.evaluate_batch([p.copy() for p in positions])):
+        progress.start(0, pop_size)
+        batch = evaluator.evaluate_batch([p.copy() for p in positions], on_result=progress.advance)
+        for i, (score, p_list) in enumerate(batch):
             pbest_fitness[i] = score
             pbest_powers.append(p_list)
 
@@ -60,11 +64,12 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
         gbest_fitness = pbest_fitness[best_idx]
         gbest_powers = pbest_powers[best_idx]
 
-        print(f"초기 세대 최적 발전량: {gbest_fitness / 1000:,.4f} kW")
+        progress.finish(gbest_fitness, evaluator)
 
         # 2. 메인 루프
         for gen in range(max_iter):
             gen_start = time.time()
+            progress.start(gen + 1, pop_size, gbest_fitness)
 
             for i in range(pop_size):
                 r1 = np.random.rand(dimensions)
@@ -81,6 +86,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
                 positions[i] = quantize_vector(positions[i], config)
 
                 score, p_list = evaluator.evaluate(positions[i].copy())
+                progress.advance(score)
 
                 if score > pbest_fitness[i]:
                     pbest_fitness[i] = score
@@ -98,7 +104,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
             )
             gens_done = gen + 1
 
-            print(f" Gen {gen + 1} | Best: {gbest_fitness / 1000:,.4f} kW | {evaluator.progress_text()}")
+            progress.finish(gbest_fitness, evaluator)
     finally:
         if gbest_position is not None:
             gbest_position = canonical_copy(gbest_position, config)

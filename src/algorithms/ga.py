@@ -9,6 +9,7 @@ from src.algorithms.common import (
     quantize_vector,
     random_grid_population,
 )
+from src.algorithms.progress import GenerationProgress
 
 
 def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
@@ -29,6 +30,7 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
     lower_bounds, upper_bounds = np.array(config["bounds"][0]), np.array(config["bounds"][1])
     logger = OptimizationLogger(config, algorithm="ga")
     evaluator = CachedEvaluator(config, eval_func, logger)
+    progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 군집 생성
     population = random_grid_population(pop_size, config)
@@ -42,7 +44,8 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
         fitness = np.zeros(pop_size)
         ind_powers_pop = []
 
-        for i, (score, p_list) in enumerate(evaluator.evaluate_batch(list(population))):
+        progress.start(0, pop_size)
+        for i, (score, p_list) in enumerate(evaluator.evaluate_batch(list(population), on_result=progress.advance)):
             fitness[i] = score
             ind_powers_pop.append(p_list)
 
@@ -51,10 +54,11 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
         best_f = fitness[best_idx]
         best_p = ind_powers_pop[best_idx]
 
-        print(f"초기 세대 최적 발전량: {best_f / 1000:,.4f} kW")
+        progress.finish(best_f, evaluator)
 
         for gen in range(max_iter):
             gen_start = time.time()
+            progress.start(gen + 1, pop_size - 1, best_f)  # 0번 엘리트는 다시 평가하지 않음
 
             new_population = np.zeros((pop_size, dimensions))
             new_fitness = np.zeros(pop_size)
@@ -87,7 +91,7 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
 
             # 자식은 이전 세대에서만 만들어지므로 한꺼번에 평가 (Workers > 1이면 WAMIT 동시 실행)
             for i, (child, (score, p_list)) in enumerate(
-                zip(children, evaluator.evaluate_batch(children), strict=True), 1
+                zip(children, evaluator.evaluate_batch(children, on_result=progress.advance), strict=True), 1
             ):
                 new_population[i] = child
                 new_fitness[i] = score
@@ -107,7 +111,7 @@ def run_ga(config, eval_func, pop_size, max_iter, mutation_rate=0.1):
             logger.write_generation(gen + 1, best_x, best_f, best_p, gen_time)
             gens_done = gen + 1
 
-            print(f" Gen {gen + 1} | Best: {best_f / 1000:,.4f} kW | {evaluator.progress_text()}")
+            progress.finish(best_f, evaluator)
     finally:
         logger.write_summary(best_x, best_f, best_p, evaluator, gens_done)
         logger.close()

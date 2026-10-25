@@ -2,7 +2,7 @@ import csv
 import json
 import os
 import queue
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 import numpy as np
@@ -194,18 +194,29 @@ class CachedEvaluator:
         self.logger.write_trial(vector, score, individual_powers, penalized=penalized)
         return result
 
-    def evaluate_batch(self, vectors):
+    def evaluate_batch(self, vectors, on_result=None):
         """여러 벡터를 평가합니다. ``evaluate``를 차례로 부른 것과 같은 결과·캐시·로그 순서를 냅니다.
 
         캐시에 없는 서로 다른 설계점은 ``workers``개의 스레드로 동시에 평가합니다. 스레드마다 작업 폴더
         ``<workspace_dir>/w<k>``를 하나씩 맡으므로 WAMIT 실행이 서로 겹치지 않습니다(WAMIT은 별도 프로세스라
         스레드로도 동시에 실행됩니다). ``workers``가 1이면 기존 작업 폴더에서 차례로 평가합니다.
+
+        ``on_result(score)``를 주면 벡터 하나의 값이 정해질 때마다(캐시 적중 포함, 끝난 순서대로) 메인
+        스레드에서 부릅니다. 모두 ``len(vectors)``번 불립니다(진행 막대용).
         """
         keys = []
         for vector in vectors:
             quantize_vector_inplace(vector, self.config)
             canonicalize_vector_inplace(vector, self.config["opt_mode"], self.config["num_wecs"])
             keys.append(make_cache_key(vector, self.config))
+
+        def notify(score):
+            if on_result is not None:
+                on_result(score)
+
+        cached = [idx for idx, key in enumerate(keys) if key in self.memory_cache]
+        for idx in cached:
+            notify(self.memory_cache[keys[idx]][0])
 
         first = {}  # 캐시에 없는 설계점 -> 처음 나온 위치
         for idx, key in enumerate(keys):
@@ -225,10 +236,17 @@ class CachedEvaluator:
                 finally:
                     slots.put(workspace)
 
+            outputs = [None] * len(todo)
             with ThreadPoolExecutor(max_workers=self.workers) as pool:
-                outputs = list(pool.map(run, [idx for _, idx in todo]))
+                futures = {pool.submit(run, idx): n for n, (_, idx) in enumerate(todo)}
+                for future in as_completed(futures):
+                    outputs[futures[future]] = future.result()
+                    notify(outputs[futures[future]][0])
         else:
-            outputs = [self.eval_func(vectors[idx], self.config) for _, idx in todo]
+            outputs = []
+            for _, idx in todo:
+                outputs.append(self.eval_func(vectors[idx], self.config))
+                notify(outputs[-1][0])
 
         for (key, idx), output in zip(todo, outputs, strict=True):
             self.total_evals += 1
@@ -242,6 +260,10 @@ class CachedEvaluator:
 
         fresh = {idx for _, idx in todo}
         self.cache_hits += sum(1 for idx in range(len(vectors)) if idx not in fresh)
+        reported = fresh.union(cached)
+        for idx in range(len(vectors)):  # 같은 배치 안에서 앞의 설계점과 겹친 벡터
+            if idx not in reported:
+                notify(self.memory_cache[keys[idx]][0])
         return [self.memory_cache[key] for key in keys]
 
     def stats(self):
@@ -251,6 +273,3 @@ class CachedEvaluator:
             "penalty_evals": self.penalty_evals,
             "cache_hits": self.cache_hits,
         }
-
-    def progress_text(self):
-        return f"Hits: {self.cache_hits} | WAMIT: {self.physics_evals} | Penalty: {self.penalty_evals}"
