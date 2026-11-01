@@ -54,6 +54,37 @@ class TestRunSites(unittest.TestCase):
         self.assertEqual(seen, ["1", "2", "3"])
         self.assertEqual(raised.exception.code, 1)
 
+    def test_variants_run_all_sites_in_order(self):
+        seen = []
+
+        def fake_main(path):
+            cfg = parse_wec_cfg(path)
+            seen.append(
+                (
+                    cfg["AlgorithmSettings"]["InitPop"],
+                    cfg["AlgorithmSettings"]["DEUpdate"],
+                    cfg["Environment"]["SiteID"],
+                )
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = os.path.join(tmp, "config.cfg")
+            shutil.copy(os.path.join(ROOT, "config.cfg"), config)
+            with mock.patch.object(run_sites.wec_main, "main", fake_main), contextlib.redirect_stdout(io.StringIO()):
+                run_sites.main(
+                    ["--sites", "2", "3", "--config", config, "--variants", "InitPop=1,DEUpdate=2", "InitPop=0"]
+                )
+            self.assertTrue(os.path.exists(os.path.join(tmp, "config_v2_site3.cfg")))
+        self.assertEqual(seen, [("1", "2", "2"), ("1", "2", "3"), ("0", "0", "2"), ("0", "0", "3")])
+
+    def test_set_value_skips_commented_lines(self):
+        text = "# 0.1   RadiusStep - x\n0.1   StepSize - y\n"
+        self.assertEqual(run_sites.set_value(text, "StepSize", "0.2"), "# 0.1   RadiusStep - x\n0.2   StepSize - y\n")
+        with self.assertRaises(ValueError):
+            run_sites.set_value(text, "RadiusStep", "0.2")
+        with self.assertRaises(ValueError):
+            run_sites.parse_variant("InitPop")
+
     def test_missing_site_line_is_an_error(self):
         with self.assertRaises(ValueError):
             run_sites.site_config("[Environment]\n", 1)
