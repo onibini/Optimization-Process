@@ -2,8 +2,19 @@ import time
 
 import numpy as np
 
-from src.algorithms.common import CachedEvaluator, OptimizationLogger, quantize_vector, random_grid_population
+from src.algorithms.common import CachedEvaluator, OptimizationLogger, initial_population, quantize_vector
 from src.algorithms.progress import GenerationProgress
+
+DE_UPDATES = ("immediate", "generation", "block")
+
+
+def update_block_size(update, pop_size, workers):
+    """한 번에 만들고 함께 평가하는 시험 벡터 수: 즉시 교체 1, 묶음 즉시 교체 ``workers``, 세대 단위 개체 수."""
+    if update == "immediate":
+        return 1
+    if update == "generation":
+        return pop_size
+    return max(1, min(int(workers), pop_size))
 
 
 def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
@@ -19,13 +30,18 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
     :param update: "immediate"(기본, 논문과 같음) - 시험 벡터가 좋으면 같은 세대 안에서 바로 개체군을 바꿈.
         "generation" - 한 세대의 시험 벡터를 모두 옛 개체군에서 만들고 한꺼번에 평가한 뒤 바꿈(Storn-Price의
         동기식 DE). WAMIT을 동시에 돌릴 수 있지만(Workers > 1) 같은 품질에 약 1.15배 세대가 필요함
-        (docs/reports/2026-10-23_10 보고서). 두 방식은 같은 난수열을 씁니다.
+        (docs/reports/2026-10-23_10 보고서).
+        "block" - 개체 i, i+1, ..., i+B-1(B = ``Workers``)의 시험 벡터를 현재 개체군에서 만들어 함께 평가하고
+        바로 바꿈. 묶음 안끼리만 서로의 교체를 못 보므로 즉시 교체에 가장 가깝고, B = 1이면 즉시 교체와 같음
+        (docs/reports/2026-11-01_02 보고서).
+        세 방식은 같은 난수열을 씁니다.
     :return: (최적 설계 변수, 최적 발전량)
     """
     if pop_size < 4:
         raise ValueError("DE/rand/1 requires PopSize >= 4.")
-    if update not in ("immediate", "generation"):
-        raise ValueError(f"DE update must be 'immediate' or 'generation', got {update!r}")
+    if update not in DE_UPDATES:
+        raise ValueError(f"DE update must be one of {DE_UPDATES}, got {update!r}")
+    block = update_block_size(update, pop_size, config.get("workers") or 1)
 
     dimensions = config["dimensions"]
     logger = OptimizationLogger(config, algorithm="de")
@@ -33,7 +49,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
     progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 개체군 생성
-    population = random_grid_population(pop_size, config)
+    population = initial_population(pop_size, config)
 
     best_x, best_f, best_p = None, -np.inf, []
     gens_done = 0
@@ -60,40 +76,31 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
             gen_start = time.time()
             progress.start(gen + 1, pop_size, best_f)
 
-            trials = []
-            for i in range(pop_size):
-                # Mutation
-                idxs = [idx for idx in range(pop_size) if idx != i]
-                a, b, c = population[np.random.choice(idxs, 3, replace=False)]
-                mutant = a + F * (b - c)
+            for start in range(0, pop_size, block):
+                members = range(start, min(start + block, pop_size))
+                trials = []
+                for i in members:
+                    # Mutation
+                    idxs = [idx for idx in range(pop_size) if idx != i]
+                    a, b, c = population[np.random.choice(idxs, 3, replace=False)]
+                    mutant = a + F * (b - c)
 
-                # Crossover
-                cross_points = np.random.rand(dimensions) < CR
-                if not np.any(cross_points):
-                    cross_points[np.random.randint(0, dimensions)] = True
+                    # Crossover
+                    cross_points = np.random.rand(dimensions) < CR
+                    if not np.any(cross_points):
+                        cross_points[np.random.randint(0, dimensions)] = True
 
-                trial = np.where(cross_points, mutant, population[i])
+                    trial = np.where(cross_points, mutant, population[i])
+                    trials.append(quantize_vector(trial, config))
 
-                trial = quantize_vector(trial, config)
-                if update == "generation":
-                    trials.append(trial)
-                    continue
+                if block == 1:
+                    results = [evaluator.evaluate(trials[0])]
+                    progress.advance(results[0][0])
+                else:
+                    results = evaluator.evaluate_batch(trials, on_result=progress.advance)
 
-                score, p_list = evaluator.evaluate(trial)
-                progress.advance(score)
-                if score > fitness[i]:
-                    fitness[i] = score
-                    population[i] = trial
-
-                    if score > best_f:
-                        best_f = score
-                        best_x = trial.copy()
-                        best_p = p_list
-
-            if update == "generation":
-                for i, (trial, (score, p_list)) in enumerate(
-                    zip(trials, evaluator.evaluate_batch(trials, on_result=progress.advance), strict=True)
-                ):
+                # Selection: 묶음이 끝나면 바로 교체 (다음 묶음의 변이가 바뀐 개체를 씀)
+                for i, trial, (score, p_list) in zip(members, trials, results, strict=True):
                     if score > fitness[i]:
                         fitness[i] = score
                         population[i] = trial

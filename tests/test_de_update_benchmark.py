@@ -56,6 +56,44 @@ class TestImmediateEqualsProjectDE(unittest.TestCase):
         history = bench.run(rastrigin, -5.0, 5.0, dims, pop, gens, 0.5, 0.9, "immediate", step=0.1)
         self.assertAlmostEqual(-best_f, history[-1], places=9)
 
+    def test_block_mode_matches_run_de_block(self):
+        """벤치마크의 blockB가 프로젝트 run_de(update="block", Workers=B)와 같은 궤적인지."""
+        dims, pop, gens = 3, 8, 6
+        for workers in (2, 3):
+            config = {
+                "dimensions": dims,
+                "bounds": [[-5.0] * dims, [5.0] * dims],
+                "step_size": [0.1] * dims,
+                "opt_mode": 1,
+                "num_wecs": 1,
+                "site_name": "bench",
+                "workers": workers,
+            }
+
+            def project_eval(vector, config):
+                value = -rastrigin(vector)
+                return value, [value]
+
+            cwd = os.getcwd()
+            with tempfile.TemporaryDirectory() as tmp:
+                os.chdir(tmp)
+                try:
+                    np.random.seed(3)
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        _, best_f = run_de(config, project_eval, pop, gens, 0.5, 0.9, update="block")
+                finally:
+                    os.chdir(cwd)
+            np.random.seed(3)
+            history = bench.run(rastrigin, -5.0, 5.0, dims, pop, gens, 0.5, 0.9, f"block{workers}", step=0.1)
+            self.assertAlmostEqual(-best_f, history[-1], places=9, msg=f"workers={workers}")
+
+    def test_block_of_one_is_immediate(self):
+        np.random.seed(1)
+        a = bench.run(rastrigin, -5.12, 5.12, 4, 10, 10, 0.5, 0.9, "immediate")
+        np.random.seed(1)
+        b = bench.run(rastrigin, -5.12, 5.12, 4, 10, 10, 0.5, 0.9, "block1")
+        self.assertEqual(a, b)
+
     def test_modes_share_the_initial_population_and_differ_later(self):
         hist = {}
         for mode in bench.MODES:
@@ -93,7 +131,7 @@ class TestImmediateEqualsProjectDE(unittest.TestCase):
                 ]
             )
             self.assertTrue(os.path.exists(os.path.join(tmp, "de_update_final.csv")))
-        self.assertEqual(len(finals), 2)
+        self.assertEqual(len(finals), len(bench.MODES))
         self.assertEqual(curves[("sphere", 3, 0, "immediate")].shape, (3, 4))
 
     def test_run_task_is_reproducible(self):

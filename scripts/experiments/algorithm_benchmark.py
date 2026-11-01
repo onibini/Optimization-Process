@@ -7,7 +7,8 @@ maximize, so they receive ``-f``. The variables lie on a lattice of ``--grid`` s
 optimization (cache hits are free); every run stops when it reaches ``--budget`` calls. DEPSO evaluates one trial
 per particle like DE. ``depso`` is the default greedy rule; ``depso_pbest``, ``depso_pbest_c1zero`` and
 ``depso_move`` are the comparison variants. ``cmaes`` uses the default boundary handling (penalty) and ``cmaes_clip``
-the earlier one (updates with the clipped samples).
+the earlier one (updates with the clipped samples). ``de_lhs`` and ``depso_lhs`` start from a Latin hypercube initial
+population (``InitPop`` 1) instead of the uniform random one.
 
 With ``--bounded`` the minimizer is moved outside the search box for two thirds of the variables (10% of the range
 beyond the upper bound for k % 3 == 0, beyond the lower bound for k % 3 == 1), so the best feasible point lies on the
@@ -73,6 +74,9 @@ ALGORITHMS = {
     "cmaes_minstd0.5": (cma_es, "run_cma_es", {"sigma_init": 0.3, "min_std_factor": 0.5}, 72),
     "cmaes_minstd1": (cma_es, "run_cma_es", {"sigma_init": 0.3, "min_std_factor": 1.0}, 72),
     "ga": (ga, "run_ga", {"mutation_rate": 0.1}, 100),
+    # Latin hypercube initial population; init_pop goes into the problem config, not to the runner
+    "de_lhs": (de, "run_de", {"F": 0.5, "CR": 0.9, "init_pop": 1}, 100),
+    "depso_lhs": (depso, "run_depso", {"F": 0.5, "CR": 0.9, "w": 0.5, "c1": 1.5, "c2": 1.5, "init_pop": 1}, 100),
 }
 CHECKPOINTS = 100  # points of the convergence curve
 # lattice steps per variable of the 5-WEC joint problem (0.1 m grid): R 0.5-2.5, D 0.5-5.0, X 3-25, Y 0.1-30
@@ -129,6 +133,8 @@ def run_task(task):
     rotate = bool(rest and rest[0])
     bounded = bool(len(rest) > 1 and rest[1])
     module, runner, kwargs, pop = ALGORITHMS[algo]
+    kwargs = dict(kwargs)
+    init_pop = kwargs.pop("init_pop", 0)
     func, lo, hi = FUNCTIONS[name]
     q = rotation(dims) if rotate else np.eye(dims)
     x_orig = OPTIMA.get(name, 0.0)
@@ -140,6 +146,7 @@ def run_task(task):
         "opt_mode": 1,
         "num_wecs": 1,
         "site_name": "bench",
+        "init_pop": init_pop,
     }
     best = []
 
@@ -185,6 +192,8 @@ def plot(curves, finals, algorithms, functions, dims_list, budget, out):
         "cmaes_minstd0.5": "#1abc9c",
         "cmaes_minstd1": "#d35400",
         "ga": "#7f7f7f",
+        "de_lhs": "#0b2545",
+        "depso_lhs": "#7d3c98",
     }
     x = np.linspace(budget / CHECKPOINTS, budget, CHECKPOINTS)
     paths = []

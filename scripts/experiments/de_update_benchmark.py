@@ -1,10 +1,12 @@
-"""Benchmark: DE with immediate replacement (the project's DE) versus generation-wise replacement.
+"""Benchmark: DE with immediate replacement (the project's DE) versus block-wise and generation-wise replacement.
 
 The project's ``run_de`` (DE/rand/1/bin) replaces individual i in the population as soon as its trial is better, so the
 mutants of individuals i+1, i+2, ... of the same generation already see the improved member ("immediate", also called
 asynchronous or steady-state DE). The textbook DE of Storn and Price builds all trials of a generation from the old
 population and replaces afterwards ("generation", synchronous DE); only that form lets a whole generation be evaluated
-in parallel.
+in parallel. "blockB" (the project's ``DEUpdate=2`` with ``Workers=B``) builds the trials of B consecutive individuals
+from the current population, evaluates them together and replaces at once, so only members of the same block miss each
+other's replacement.
 
 Both variants below use exactly the same operators, random-number calls and parameters as ``run_de`` (the immediate
 variant reproduces ``run_de`` step by step, see tests/test_de_update_benchmark.py); they differ only in when the
@@ -57,7 +59,7 @@ FUNCTIONS = {
         500.0,
     ),
 }
-MODES = ("immediate", "generation")
+MODES = ("immediate", "block2", "block4", "block8", "generation")
 
 
 def evaluate(func, x):
@@ -87,32 +89,38 @@ def run(objective, lower, upper, dims, pop_size, gens, F, CR, mode, step=None):
         population = lower + np.random.rand(pop_size, dims) * (upper - lower)
     fitness = np.array([objective(ind) for ind in population])
     history = [float(fitness.min())]
+    block = block_size(mode, pop_size)
     for _ in range(gens):
-        trials = []
-        for i in range(pop_size):
-            idxs = [idx for idx in range(pop_size) if idx != i]
-            a, b, c = population[np.random.choice(idxs, 3, replace=False)]
-            mutant = a + F * (b - c)
-            cross_points = np.random.rand(dims) < CR
-            if not np.any(cross_points):
-                cross_points[np.random.randint(0, dims)] = True
-            trial = np.where(cross_points, mutant, population[i])
-            trial = quantize(trial, lower, step, max_index) if step is not None else np.clip(trial, lower, upper)
-            if mode == "immediate":
-                score = objective(trial)
-                if score < fitness[i]:
-                    fitness[i] = score
-                    population[i] = trial
-            else:
-                trials.append(trial)
-        if mode == "generation":
-            for i, trial in enumerate(trials):  # evaluated together (in parallel in a real run), then replaced
+        for start in range(0, pop_size, block):
+            members = range(start, min(start + block, pop_size))
+            trials = []
+            for i in members:
+                idxs = [idx for idx in range(pop_size) if idx != i]
+                a, b, c = population[np.random.choice(idxs, 3, replace=False)]
+                mutant = a + F * (b - c)
+                cross_points = np.random.rand(dims) < CR
+                if not np.any(cross_points):
+                    cross_points[np.random.randint(0, dims)] = True
+                trial = np.where(cross_points, mutant, population[i])
+                trials.append(
+                    quantize(trial, lower, step, max_index) if step is not None else np.clip(trial, lower, upper)
+                )
+            for i, trial in zip(members, trials, strict=True):  # evaluated together in a real run, then replaced
                 score = objective(trial)
                 if score < fitness[i]:
                     fitness[i] = score
                     population[i] = trial
         history.append(float(fitness.min()))
     return history
+
+
+def block_size(mode, pop_size):
+    """Trials built from the same population and evaluated together: 1 (immediate), B (blockB), all (generation)."""
+    if mode == "immediate":
+        return 1
+    if mode == "generation":
+        return pop_size
+    return int(mode.removeprefix("block"))
 
 
 def run_task(task):
@@ -131,8 +139,20 @@ def plot(curves, finals, functions, dims_list, grids, out):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    colors = {"immediate": "#2a6fdb", "generation": "#e0712c"}
-    labels = {"immediate": "immediate (project DE)", "generation": "generation-wise"}
+    colors = {
+        "immediate": "#2a6fdb",
+        "block2": "#1b998b",
+        "block4": "#8a6fdb",
+        "block8": "#c9a227",
+        "generation": "#e0712c",
+    }
+    labels = {
+        "immediate": "immediate (project DE)",
+        "block2": "blocks of 2",
+        "block4": "blocks of 4",
+        "block8": "blocks of 8",
+        "generation": "generation-wise",
+    }
     paths = []
     for grid, dims in itertools.product(grids, dims_list):
         fig, axes = plt.subplots(2, 3, figsize=(13, 7.5))
@@ -164,7 +184,7 @@ def plot(curves, finals, functions, dims_list, grids, out):
             for patch, mode in zip(box["boxes"], MODES, strict=True):
                 patch.set_facecolor(colors[mode])
                 patch.set_alpha(0.5)
-            ax.set_xticks([1, 2], ["imm.", "gen."])
+            ax.set_xticks(range(1, len(MODES) + 1), ["imm.", "b2", "b4", "b8", "gen."], fontsize=8)
             ax.set_yscale("log")
             ax.set_title(name, fontsize=10)
             ax.grid(alpha=0.3)
@@ -223,13 +243,13 @@ def main(argv=None):
         finals[key] = runs[:, -1]
         curves[key] = np.percentile(runs, [25, 50, 75], axis=0)
     for name, dims, grid in cases:
-        a, b = finals[(name, dims, grid, "immediate")], finals[(name, dims, grid, "generation")]
-        p = mannwhitneyu(a, b).pvalue if np.any(a != b) else 1.0
-        print(
-            f"{name:<10} D={dims:<3} grid={grid:<4} median immediate {np.median(a):.3e}"
-            f"  generation {np.median(b):.3e}  p={p:.3g}",
-            flush=True,
-        )
+        a = finals[(name, dims, grid, "immediate")]
+        parts = [f"{name:<10} D={dims:<3} grid={grid:<4} immediate {np.median(a):.3e}"]
+        for mode in MODES[1:]:
+            b = finals[(name, dims, grid, mode)]
+            p = mannwhitneyu(a, b).pvalue if np.any(a != b) else 1.0
+            parts.append(f"{mode} {np.median(b):.3e} (p={p:.2g})")
+        print("  ".join(parts), flush=True)
     curve_path = os.path.join(args.out, "de_update_curves.csv")
     with open(curve_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)

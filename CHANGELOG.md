@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+### 2026-11-01 — 라틴 하이퍼큐브 초기 개체군 `InitPop`
+보고서: [docs/reports/2026-11-01_03_lhs-initial-population.md](docs/reports/2026-11-01_03_lhs-initial-population.md)
+
+#### Added
+- `[AlgorithmSettings] InitPop`: 0 균등 난수(기본, 논문), 1 라틴 하이퍼큐브.
+  - DE, PSO, GA, DEPSO에 적용하고, CMA-ES는 무시한다.
+  - 구현: `common.lhs_grid_population`, `initial_population`, `check_init_pop`.
+  - 기본값의 결과는 이전과 같다.
+- `summary.csv`에 `init_pop` 칸. `algorithm_benchmark.py`에 `de_lhs`, `depso_lhs`. `tests/test_init_population.py`(10건).
+
+#### Notes
+- LHS는 각 변수의 끝 영역(예: X3 ≤ 3.5 m)을 항상 덮는다. 균등 난수는 7.4% 확률로 그 영역을 통째로 놓친다.
+- 다섯 기 모두 벽 옆인 조합은 두 방법 모두 거의 뽑지 못한다.
+- 벤치마크(DE 100, 7차원, 평가 30,000회, 시드 30)에서는 기본·경계 최적·경계 최적 + 회전 모두 최종값 차이가 없었다(p ≥ 0.12).
+
+### 2026-11-01 — 묶음 즉시 교체 DE(`DEUpdate 2`)와 WAMIT 동시 실행 측정
+보고서: [docs/reports/2026-11-01_02_de-block-update.md](docs/reports/2026-11-01_02_de-block-update.md)
+
+#### Added
+- `DEUpdate` 2(`run_de(update="block")`): `Workers`개씩 시험 벡터를 함께 평가하고 바로 교체한다.
+  - `Workers` 1이면 즉시 교체(0)와 같다.
+  - `de.update_block_size`, `de_update_benchmark.py`에 `block2/4/8` 추가, `summary.csv`에 `de_update`·`workers` 칸, 테스트 5건.
+
+#### Notes
+- 벤치마크(30 시드)에서 묶음 2·4·8은 즉시 교체와 품질이 같았다. 72번 비교 중 9번만 p < 0.05였고 방향도 섞였다.
+- 세대 단위(1)는 24번 중 11번 뚜렷이 나빴다.
+- 계산용 PC(Ryzen 7 9700X)에서 `Workers` × `NCPU` 4 × 4와 2 × 8은 1 × 8보다 1.19배 빨랐다(설계당 7.40 → 6.23 s). 앞으로 계산용 PC 작업은 4 × 4와 `DEUpdate` 2로 돌린다.
+
 ### 2026-11-01 — 입사파 방향 `WaveAngle`
 보고서: [docs/reports/2026-11-01_01_wave-angle.md](docs/reports/2026-11-01_01_wave-angle.md)
 

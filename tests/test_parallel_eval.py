@@ -12,6 +12,7 @@ import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
 from src.algorithms.common import CachedEvaluator
+from src.algorithms.de import update_block_size
 
 
 def config(workers=1, dims=4):
@@ -136,6 +137,23 @@ class TestAlgorithmsWithWorkers(InTempDir):
         self.assertGreater(generation[1], -5.0)  # random start is around -40
         with self.assertRaises(ValueError):
             self._run(run_de, 1, F=0.5, CR=0.9, update="other")
+
+    def test_block_de_with_one_worker_is_immediate(self):
+        immediate = self._run(run_de, 1, F=0.5, CR=0.9)
+        self.assertEqual(self._run(run_de, 1, F=0.5, CR=0.9, update="block"), immediate)
+
+    def test_block_de_with_workers_differs_and_still_converges(self):
+        immediate = self._run(run_de, 1, F=0.5, CR=0.9)
+        block = self._run(run_de, 4, F=0.5, CR=0.9, update="block")
+        self.assertNotEqual(immediate, block)
+        self.assertGreater(block[1], -5.0)
+
+    def test_block_size(self):
+        self.assertEqual(update_block_size("immediate", 100, 4), 1)
+        self.assertEqual(update_block_size("generation", 100, 4), 100)
+        self.assertEqual(update_block_size("block", 100, 4), 4)
+        self.assertEqual(update_block_size("block", 3, 8), 3)
+        self.assertEqual(update_block_size("block", 100, 0), 1)
 
 
 if __name__ == "__main__":

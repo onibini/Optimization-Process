@@ -55,7 +55,7 @@ The system implements five optimization engines. With `Workers > 1` (`[WAMIT Set
 ### 1. Differential Evolution (DE)
 - **Strategy**: `DE/rand/1/bin`
 - **Equation**: $\vec{u}_i = \vec{x}_{r_1} + F \cdot (\vec{x}_{r_2} - \vec{x}_{r_3})$
-- **Parameters**: `F` (mutation scale), `CR` (crossover probability), `DEUpdate` (0: the trial replaces its target immediately, so later mutants of the same generation see it, as in the paper; 1: generation-wise, all trials are built from the previous population and evaluated together, which allows several WAMIT runs at the same time).
+- **Parameters**: `F` (mutation scale), `CR` (crossover probability), `DEUpdate` (0: the trial replaces its target immediately, so later mutants of the same generation see it, as in the paper; 1: generation-wise, all trials are built from the previous population and evaluated together, which allows several WAMIT runs at the same time; 2: immediate in blocks of `Workers` trials, built from the current population and evaluated together, then replaced at once; with `Workers` 1 it equals 0). `InitPop` (0: uniform random grid points, 1: Latin hypercube on the grid) applies to DE, PSO, GA and DEPSO.
 
 ### 2. Particle Swarm Optimization (PSO)
 - **Velocity Update**: $\vec{v}_i \leftarrow w\vec{v}_i + c_1 r_1 (\vec{p}_i - \vec{x}_i) + c_2 r_2 (\vec{g} - \vec{x}_i)$

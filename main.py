@@ -3,6 +3,8 @@ import sys
 import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
+from src.algorithms.common import DEFAULT_INIT_POP, INIT_POPULATIONS, check_init_pop
+from src.algorithms.de import update_block_size
 from src.physics.mesh_axisymmetric_shape import (
     DEFAULT_QUARTER_PANELS,
     DEFAULT_SHAPE,
@@ -37,6 +39,9 @@ from src.utils.config_parser import parse_wec_cfg
 from src.utils.data_handler import load_env_data
 
 __all__ = ["main", "parse_wec_cfg", "print_result"]
+
+# config.cfg DEUpdate -> run_de(update=...)
+DE_UPDATE_SWITCH = {0: "immediate", 1: "generation", 2: "block"}
 
 
 def print_result(best_x, best_f, config):
@@ -190,19 +195,36 @@ def main(cfg_path="config.cfg"):
     pop_size = int(cfg["AlgorithmSettings"]["PopSize"])
     max_iter = int(cfg["AlgorithmSettings"]["MaxIter"])
     algo_settings = cfg["AlgorithmSettings"]
+    try:
+        init_pop = check_init_pop(int(algo_settings.get("InitPop", DEFAULT_INIT_POP)))
+    except ValueError as err:
+        print(f"Error: {err}")
+        sys.exit(1)
+    problem_config["init_pop"] = init_pop
+    if algo_type == 4:
+        if init_pop != DEFAULT_INIT_POP:
+            print("Note: InitPop is ignored by CMA-ES (it starts from one random mean, not a population).")
+    else:
+        print(f"Initial population: {INIT_POPULATIONS[init_pop]}")
 
-    de_update = "generation" if int(algo_settings.get("DEUpdate", 0)) == 1 else "immediate"
-    batch_algorithms = {3, 4} | ({1} if de_update == "generation" else set())
+    try:
+        de_update = DE_UPDATE_SWITCH[int(algo_settings.get("DEUpdate", 0))]
+    except KeyError:
+        print(f"Error: DEUpdate must be one of {sorted(DE_UPDATE_SWITCH)}, got {algo_settings.get('DEUpdate')}.")
+        sys.exit(1)
+    batch_algorithms = {3, 4} | ({1} if de_update != "immediate" else set())
     if workers > 1 and algo_type not in batch_algorithms:
         print(
             "Warning: Workers > 1 only speeds up the initial population for this algorithm "
-            "(parallel generations: DE with DEUpdate=1, GA, CMA-ES)."
+            "(parallel generations: DE with DEUpdate=1 or 2, GA, CMA-ES)."
         )
 
     if algo_type == 1:
         print("Algorithm: [Differential Evolution]")
         if de_update == "generation":
             print("  DE update: generation-wise (whole generation evaluated together)")
+        elif de_update == "block":
+            print(f"  DE update: immediate in blocks of {update_block_size('block', pop_size, workers)} trials")
         best_x, best_f = run_de(
             config=problem_config,
             eval_func=eval_func,
