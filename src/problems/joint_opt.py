@@ -48,6 +48,7 @@ def get_joint_config(constraints_dict, params_dict, num_wecs, env_data, wamit_da
         "workers": wamit_data.get("Workers", 1),
         "shape": wamit_data.get("Shape", 1),
         "vertical_wall": wamit_data.get("VerticalWall", 1),
+        "wave_angle": wamit_data.get("WaveAngle", 0.0),
         "hydro_solver": wamit_data.get("HydroSolver", 1),
     }
 

@@ -5,6 +5,22 @@
 
 ## [Unreleased]
 
+### 2026-11-01 — 입사파 방향 `WaveAngle`
+보고서: [docs/reports/2026-11-01_01_wave-angle.md](docs/reports/2026-11-01_01_wave-angle.md)
+
+#### Added
+- `config.cfg` `[WEC Parameters]`에 `WaveAngle`(도, 기본 0) 추가.
+  - 정의: 파도가 바다 쪽에서 벽으로 다가오는 방향과 벽 법선 사이 각도. 양수는 +y 쪽에서 다가오는 파도.
+  - 범위: −90 < 값 < 90. 벽이 없는 배치는 0만 받는다. `OptMode` 1에서는 무시한다.
+- WAMIT `.pot`에는 `BETA = -WaveAngle`로 쓴다.
+  - 벽(`IWALLX0=1`)이 있으면 WAMIT이 반사파(180° − BETA)를 함께 넣으므로, 실제 진행 방향 180° + θ와 같은 파동장이다(WAMIT v7 매뉴얼 12.4절).
+  - WAMIT 계산으로 확인했다: 벽이 있으면 β와 180° − β의 차이가 0.0001% 미만이고, 벽이 없으면 최대 3% 다르다.
+- `wamit_handler.check_wave_angle`, `wamit_beta`; `summary.csv`의 `wave_angle` 칸; `tests/test_wave_angle.py`(15건).
+
+#### Changed
+- `wall_enabled`를 `solvers.py`에서 `wamit_handler.py`로 옮겼다(`solvers.wall_enabled`도 계속 쓸 수 있다).
+- 기본값(0)에서는 WAMIT 입력 파일이 수정 전과 바이트 단위로 같다.
+
 ### 2026-10-27 — DE 세 해역 동시최적화 결과(100 × 300)와 direct solver 확인(분석)
 보고서: [docs/reports/2026-10-27_01_de100-sites-result.md](docs/reports/2026-10-27_01_de100-sites-result.md)
 

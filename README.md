@@ -78,7 +78,7 @@ Everything is set in [`config.cfg`](config.cfg) (`value  name  - comment` per li
 | | `Algorithm` | 1 DE, 2 PSO, 3 GA, 4 CMA-ES, 5 DEPSO |
 | | `WaveSpec` | 1 JONSWAP ITTC (default), 2 JONSWAP Goda, 3 Pierson-Moskowitz |
 | | `HydroSolver` | 1 WAMIT (default), 2 Capytaine (open sea only) |
-| `[WEC Parameters]` | `NumWECs`, `Shape`, `VerticalWall`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; wall at x = 0 on (1, default) or off; minimum centre distance = `MinSpacing` × R (4) |
+| `[WEC Parameters]` | `NumWECs`, `Shape`, `VerticalWall`, `WaveAngle`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; wall at x = 0 on (1, default) or off; incident wave direction from the wall normal in degrees (0, written to WAMIT as `BETA = -WaveAngle`); minimum centre distance = `MinSpacing` × R (4) |
 | `[AlgorithmSettings]` | `PopSize`, `MaxIter`, `F`, `CR`, `w`, `c1`, `c2`, `SigmaInit`, `DEUpdate` | population, generations and optimizer parameters |
 | `[Constraints]` | `RadiusMin/Max`, `DraftMin/Max`, `WECn_X/YMin/Max`, `StepSize` | search ranges (all positive) and grid step (0.1 m) |
 | `[Environment]` | `SiteID` | row of [`data/env_data.csv`](data/env_data.csv) (Hs, Tp, γ, depth) |

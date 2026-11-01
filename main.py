@@ -16,8 +16,10 @@ from src.physics.solvers import DEFAULT_HYDRO_SOLVER, HYDRO_SOLVERS, check_solve
 from src.physics.wamit_handler import (
     DEFAULT_OMEGA_MAX,
     DEFAULT_SOLVER,
+    DEFAULT_WAVE_ANGLE,
     check_freq_grid,
     check_solver,
+    check_wave_angle,
     highest_heave_omega0,
     omega_grid,
 )
@@ -91,6 +93,8 @@ def main(cfg_path="config.cfg"):
         vertical_wall = int(cfg["WEC Parameters"].get("VerticalWall", 1))
         hydro_solver = int(cfg["Simulation"].get("HydroSolver", DEFAULT_HYDRO_SOLVER))
         check_solver_settings(hydro_solver, vertical_wall, opt_mode)
+        wave_angle = float(cfg["WEC Parameters"].get("WaveAngle", DEFAULT_WAVE_ANGLE))
+        check_wave_angle(wave_angle, opt_mode != 1 and bool(vertical_wall), opt_mode)
     except (ValueError, ImportError) as err:
         print(f"Error: {err}")
         sys.exit(1)
@@ -128,7 +132,11 @@ def main(cfg_path="config.cfg"):
     print(f"WAMIT: Solver={solver}, {grid_text} up to {omega_top:g} rad/s, MeshPanels={mesh_panels}")
     print(f"WEC shape: {SHAPES[shape]}")
     wall_text = "vertical wall at x = 0" if opt_mode != 1 and vertical_wall else "open sea"
+    if opt_mode != 1 and vertical_wall:
+        wall_text += f", waves arriving at {wave_angle:g} deg from the wall normal"
     print(f"Hydrodynamics: {HYDRO_SOLVERS[hydro_solver]}, {wall_text}")
+    if opt_mode == 1 and wave_angle != 0:
+        print("Note: WaveAngle is ignored in OptMode 1 (one axisymmetric WEC in the open sea).")
     if workers > 1:
         print(f"WAMIT: {workers} runs at the same time, NCPU={ncpu} each ({workers * ncpu} cores in total)")
     wamit_data = {
@@ -142,6 +150,7 @@ def main(cfg_path="config.cfg"):
         "Workers": workers,
         "Shape": shape,
         "VerticalWall": vertical_wall,
+        "WaveAngle": wave_angle,
         "HydroSolver": hydro_solver,
     }
 

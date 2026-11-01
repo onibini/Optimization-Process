@@ -31,6 +31,7 @@ COLUMNS = [
     "solver",
     "omega_max",
     "freq_grid",
+    "wave_angle",
     "best_kw",
     "physics_evals",
     "cache_hits",
@@ -84,6 +85,7 @@ def summarize_job(job_dir):
         row["solver"] = wamit.get("Solver", "")
         row["omega_max"] = wamit.get("OmegaMax", "")
         row["freq_grid"] = wamit.get("FreqGrid", "")
+        row["wave_angle"] = cfg.get("WEC Parameters", {}).get("WaveAngle", "")
 
     if "best_fitness" in summary:
         row["best_kw"] = round(summary["best_fitness"] / 1000, 4)

@@ -16,9 +16,11 @@ from src.physics.wamit_handler import (
     DEFAULT_WORKSPACE,
     adaptive_omegas,
     check_freq_grid,
+    check_wave_angle,
     omega_grid,
     resolve_geometry,
     run_wamit,
+    wall_enabled,
     write_wamit_inputs,
 )
 
@@ -32,14 +34,6 @@ def check_hydro_solver(solver):
     if isinstance(solver, bool) or solver not in HYDRO_SOLVERS:
         raise ValueError(f"HydroSolver must be one of {sorted(HYDRO_SOLVERS)} ({HYDRO_SOLVERS}), got {solver!r}")
     return solver
-
-
-def wall_enabled(config):
-    """수직벽 사용 여부: OptMode 1(형상, 1기)은 항상 개방 해역, 그 외에는 ``vertical_wall``(기본 켬)."""
-    if config["opt_mode"] == 1:
-        return False
-    flag = config.get("vertical_wall")
-    return True if flag is None else bool(flag)
 
 
 def check_solver_settings(hydro_solver, vertical_wall, opt_mode):
@@ -114,6 +108,7 @@ def capytaine_hydrodynamics(vector, config, positions=None, wave_direction=0.0):
     cpt = import_capytaine()
     if wall_enabled(config):
         raise ValueError("Capytaine supports the open sea only in this project (vertical_wall must be off).")
+    check_wave_angle(config.get("wave_angle") or 0.0, False, config.get("opt_mode"))
     radius, draft, body_positions = resolve_geometry(vector, config, positions)
     shape = check_shape(config.get("shape") or DEFAULT_SHAPE)
     target = int(config.get("mesh_panels") or DEFAULT_QUARTER_PANELS)

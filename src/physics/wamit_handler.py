@@ -31,6 +31,15 @@ DEFAULT_WORKSPACE = "workspace"
 DEFAULT_SOLVER = 0
 MAXITT = 100  # 반복 솔버 최대 반복 횟수 (WAMIT 기본값은 35)
 
+# 입사파 방향 WaveAngle [도]: 파도가 바다 쪽(x > 0)에서 벽으로 다가오는 방향과 벽의 법선(+x 축) 사이 각도.
+# 0은 벽에 수직으로 다가오는 파도, 양수는 +y 쪽에서 비스듬히 다가오는 파도(진행 방향 180 + WaveAngle).
+# WAMIT은 벽(IWALLX0=1)이 있으면 BETA로 준 파도와 그 반사파(180 - BETA)를 함께 넣으므로 BETA = 180 + a와
+# BETA = -a는 같은 파동장입니다. 기존 입력(BETA 0)이 그대로 유지되도록 -a를 씁니다.
+# |WaveAngle| = 90은 벽과 나란한 파도로, WAMIT의 진폭 정의(반사 전 진폭 A, 반사 후 2A)가 맞지 않아 받지 않습니다.
+# 근거: WAMIT v7 매뉴얼 12.4절, docs/reports/2026-11-01_01_wave-angle.md
+DEFAULT_WAVE_ANGLE = 0.0
+MAX_WAVE_ANGLE = 90.0
+
 
 def omega_grid(omega_max=None):
     """(주파수 점 수, 실제 상한)을 돌려줍니다. 점 수는 ``OMEGA_MIN + k * OMEGA_STEP <= omega_max``인 k의 개수입니다."""
@@ -114,6 +123,40 @@ def check_solver(solver):
             f"Solver must be an integer >= 0 (0: iterative, 1: direct, N: N-block iterative), got {solver}"
         )
     return solver
+
+
+def wall_enabled(config):
+    """수직벽 사용 여부: OptMode 1(형상, 1기)은 항상 개방 해역, 그 외에는 ``vertical_wall``(기본 켬)."""
+    if config.get("opt_mode") == 1:
+        return False
+    flag = config.get("vertical_wall")
+    return True if flag is None else bool(flag)
+
+
+def check_wave_angle(angle, wall=True, opt_mode=3):
+    """WaveAngle [도]을 검증합니다. 벽이 있으면 -90 < a < 90, 벽 없는 배치(OptMode 2, 3)는 0만 받습니다.
+
+    OptMode 1(축대칭 1기, 개방 해역)은 방향과 결과가 무관하므로 값을 검사만 하고 쓰지 않습니다.
+    """
+    if isinstance(angle, bool):
+        raise ValueError(f"WaveAngle must be a number in degrees, got {angle!r}")
+    angle = float(angle)
+    if not math.isfinite(angle) or abs(angle) >= MAX_WAVE_ANGLE:
+        raise ValueError(
+            f"WaveAngle must be between -{MAX_WAVE_ANGLE:g} and {MAX_WAVE_ANGLE:g} degrees (exclusive), got {angle}"
+        )
+    if angle != 0 and not wall and opt_mode != 1:
+        raise ValueError("WaveAngle other than 0 needs the vertical wall (VerticalWall 1) in this project.")
+    return angle
+
+
+def wamit_beta(config):
+    """설정의 WaveAngle을 WAMIT .pot의 BETA [도]로 바꿉니다. 벽이 있으면 -WaveAngle, 없으면 0."""
+    wall = wall_enabled(config)
+    angle = check_wave_angle(config.get("wave_angle") or DEFAULT_WAVE_ANGLE, wall, config.get("opt_mode"))
+    if not wall:
+        return 0.0
+    return -angle + 0.0  # -0.0을 0.0으로
 
 
 def resolve_geometry(vector, config, positions=None):
@@ -228,7 +271,7 @@ def write_pot_file(workspace_dir, positions, config, omegas=None):
             for w in omegas:
                 f.write(f"{w:.6f}\n")
         f.write(f"{'1':<20} NBETA\n")
-        f.write(f"{'0':<20} BETA\n")
+        f.write(f"{f'{wamit_beta(config):g}':<20} BETA\n")
         f.write(f"{len(positions):<20} NBODY\n")
         for x, y in positions:
             f.write("wec.gdf\n")
