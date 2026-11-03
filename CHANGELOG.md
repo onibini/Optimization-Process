@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### 2026-11-04 — 평가 기록 데이터베이스와 `EvalCache`
+보고서: [docs/reports/2026-11-04_03_eval-db.md](docs/reports/2026-11-04_03_eval-db.md)
+
+#### Added
+- `src/utils/eval_db.py`: 평가 설정 지문(해역, 스펙트럼, 수심, 메쉬, 솔버, 주파수, 형상, 벽, 입사각, 최소 간격, `EVAL_VERSION`)별로 설계와 발전량을 `data/eval_db/*.csv`에 저장한다.
+- `scripts/build_eval_db.py`: `results/`, `logs/`의 trial 기록을 데이터베이스로 합친다. `scripts/remote.ps1 fetch`가 자동 실행한다.
+- `[WAMIT Settings] EvalCache`(기본 0): 1이면 `CachedEvaluator`가 지문이 같은 기록을 미리 불러와, 저장된 설계는 WAMIT 없이 쓴다(`stored_hits`, 진행 줄 `Stored`).
+- `tests/test_eval_db.py`(7건).
+
+#### Notes
+- 첫 데이터베이스: 부안 13,298, 칠발도 40,867, 영일만항(13 m) 14,668 설계(WAMIT 54,977회, 약 107시간분). 같은 설계의 반복 계산 차이는 6.2e-7 이하.
+- `data/eval_db/`는 gitignore(결과에서 만들어짐)하지만, `remote.ps1 submit` 스냅샷에는 들어간다.
+- 논문 때 기록은 평가 방식이 달라(0.5~1% 높음) 넣지 않았다. 칠발도 기록에는 다섯 기 모두 벽 옆인 설계가 2개뿐이라 대리모델에는 추가 표본이 필요하다.
+
 ### 2026-11-04 — DE 개체군에 대칭 쌍 정렬을 쓰지 않음
 보고서: [docs/reports/2026-11-04_02_de-unsorted-population.md](docs/reports/2026-11-04_02_de-unsorted-population.md)
 

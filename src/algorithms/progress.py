@@ -99,6 +99,8 @@ class GenerationProgress:
                 f" | WAMIT {evaluator.physics_evals:>{w}}  Hits {evaluator.cache_hits:>{w}}"
                 f"  Penalty {evaluator.penalty_evals:>{w}}"
             )
+            if getattr(evaluator, "stored_loaded", 0):
+                line += f"  Stored {evaluator.stored_hits:>{w}}"
         if self.live:
             self.stream.write("\r" + line.ljust(self._drawn) + "\n")
         else:

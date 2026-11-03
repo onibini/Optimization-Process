@@ -79,6 +79,7 @@ function Receive-Result([string]$id) {
     $py = (Get-Command python -ErrorAction SilentlyContinue)
     if ($py) {
         & python (Join-Path $PSScriptRoot "summarize_results.py") $ResultsDir
+        & python (Join-Path $PSScriptRoot "build_eval_db.py") $dest
     }
 }
 

@@ -82,7 +82,7 @@ Everything is set in [`config.cfg`](config.cfg) (`value  name  - comment` per li
 | `[AlgorithmSettings]` | `PopSize`, `MaxIter`, `F`, `CR`, `w`, `c1`, `c2`, `SigmaInit`, `DEUpdate` | population, generations and optimizer parameters; DE replacement (0 immediate, 1 generation-wise, 2 immediate in blocks of `Workers`) |
 | `[Constraints]` | `RadiusMin/Max`, `DraftMin/Max`, `WECn_X/YMin/Max`, `StepSize` | search ranges (all positive) and grid step (0.1 m) |
 | `[Environment]` | `SiteID` | row of [`data/env_data.csv`](data/env_data.csv) (Hs, Tp, γ, depth) |
-| `[WAMIT Settings]` | `MeshPanels` (120), `Solver` (0), `OmegaMax` (3.0), `FreqGrid` (0), `Workers` (1), `NCPU` | mesh, solver, frequency grid and parallel runs |
+| `[WAMIT Settings]` | `MeshPanels` (120), `Solver` (0), `OmegaMax` (3.0), `FreqGrid` (0), `Workers` (1), `EvalCache` (0), `NCPU` | mesh, solver, frequency grid, parallel runs and reuse of stored evaluations (`data/eval_db`, built by `scripts/build_eval_db.py`) |
 
 Sites included: **Buan** (Hs 1.07 m, Tp 5.46 s, 50 m), **Chilbaldo** (0.87 m, 4.48 s, 33 m), **Yeongilmanhang** (0.92 m, 6.66 s, 13 m).
 

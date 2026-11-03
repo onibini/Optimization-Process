@@ -155,6 +155,10 @@ class CachedEvaluator:
 
     eval_func는 ``(score, individual_powers)`` 또는 ``(score, individual_powers, info)``를 반환합니다.
     ``info.get("penalized")``가 True이면 제약 위반으로 WAMIT을 실행하지 않은 평가로 집계합니다.
+
+    ``config["eval_cache"]``가 참이면 평가 기록 데이터베이스(``src/utils/eval_db.py``)에서 설정 지문이 같은
+    기록을 미리 불러옵니다. 저장된 설계는 eval_func 없이 그 값을 쓰고, 처음 쓸 때 trial 기록에 남기며
+    ``stored_hits``로 따로 셉니다(WAMIT·캐시 적중 수에는 넣지 않음).
     """
 
     def __init__(self, config, eval_func, logger):
@@ -166,6 +170,34 @@ class CachedEvaluator:
         self.cache_hits = 0
         self.total_evals = 0  # 캐시 미스 = 고유 설계점 평가 수 (패널티 포함)
         self.penalty_evals = 0  # 제약 위반으로 물리 해석 없이 패널티를 받은 평가 수
+        self.stored = {}  # 불러왔지만 아직 쓰지 않은 기록: 캐시 키 -> (score, powers, penalized, vector)
+        self.stored_loaded = 0
+        self.stored_hits = 0  # 데이터베이스 값으로 대신한 평가 수
+        if config.get("eval_cache"):
+            from src.utils.eval_db import ROOT, load_for
+
+            rows, path = load_for(config, config.get("eval_db_dir") or os.path.join(ROOT, "data", "eval_db"))
+            self.preload(rows)
+            name = os.path.basename(path) if path else "(settings not recorded)"
+            print(f"Stored evaluations: {self.stored_loaded} designs from {name}")
+
+    def preload(self, rows):
+        """``(vector, score, powers, penalized)`` 목록을 저장 기록으로 등록. 이 문제의 격자 밖인 설계는 건너뜀."""
+        for vector, score, powers, penalized in rows:
+            canon = canonical_copy(vector, self.config)
+            if len(canon) != len(vector) or not np.allclose(canon, vector, atol=1e-9):
+                continue
+            key = make_cache_key(canon, self.config)
+            if key not in self.memory_cache and key not in self.stored:
+                self.stored[key] = (score, list(powers), bool(penalized), canon)
+        self.stored_loaded = len(self.stored)
+
+    def _use_stored(self, key):
+        score, powers, penalized, vector = self.stored.pop(key)
+        self.stored_hits += 1
+        self.memory_cache[key] = (score, powers)
+        self.logger.write_trial(vector, score, powers, penalized=penalized)
+        return self.memory_cache[key]
 
     @property
     def physics_evals(self):
@@ -180,6 +212,8 @@ class CachedEvaluator:
         if mem_key in self.memory_cache:
             self.cache_hits += 1
             return self.memory_cache[mem_key]
+        if mem_key in self.stored:
+            return self._use_stored(mem_key)
 
         self.total_evals += 1
         output = self.eval_func(vector, self.config)
@@ -217,6 +251,11 @@ class CachedEvaluator:
         cached = [idx for idx, key in enumerate(keys) if key in self.memory_cache]
         for idx in cached:
             notify(self.memory_cache[keys[idx]][0])
+        from_store = set()  # 데이터베이스 값으로 정해진 벡터 (같은 키가 다시 나오면 그다음부터는 캐시 적중)
+        for idx, key in enumerate(keys):
+            if key in self.stored:
+                notify(self._use_stored(key)[0])
+                from_store.add(idx)
 
         first = {}  # 캐시에 없는 설계점 -> 처음 나온 위치
         for idx, key in enumerate(keys):
@@ -259,8 +298,8 @@ class CachedEvaluator:
             self.logger.write_trial(vectors[idx], score, individual_powers, penalized=penalized)
 
         fresh = {idx for _, idx in todo}
-        self.cache_hits += sum(1 for idx in range(len(vectors)) if idx not in fresh)
-        reported = fresh.union(cached)
+        self.cache_hits += sum(1 for idx in range(len(vectors)) if idx not in fresh and idx not in from_store)
+        reported = fresh.union(cached, from_store)
         for idx in range(len(vectors)):  # 같은 배치 안에서 앞의 설계점과 겹친 벡터
             if idx not in reported:
                 notify(self.memory_cache[keys[idx]][0])
@@ -272,4 +311,5 @@ class CachedEvaluator:
             "physics_evals": self.physics_evals,
             "penalty_evals": self.penalty_evals,
             "cache_hits": self.cache_hits,
+            "stored_hits": self.stored_hits,
         }

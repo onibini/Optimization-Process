@@ -129,6 +129,9 @@ def main(cfg_path="config.cfg"):
         workers = int(cfg["WAMIT Settings"].get("Workers", 1))
         if workers < 1:
             raise ValueError(f"Workers must be >= 1, got {workers}")
+        eval_cache = int(cfg["WAMIT Settings"].get("EvalCache", 0))
+        if eval_cache not in (0, 1):
+            raise ValueError(f"EvalCache must be 0 or 1, got {eval_cache}")
     except ValueError as err:
         print(f"Error: {err}")
         sys.exit(1)
@@ -176,6 +179,7 @@ def main(cfg_path="config.cfg"):
     else:
         print("Error: Invalid OptMode in config file.")
         sys.exit(1)
+    problem_config["eval_cache"] = bool(eval_cache)  # CachedEvaluator가 data/eval_db의 기록을 미리 불러옴
 
     # 공진이 주파수 격자 위에 있는 설계가 탐색 범위에 있으면 알림 (PTO 감쇠가 격자 끝에서 정해짐)
     if opt_mode == 2:
