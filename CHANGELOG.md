@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### 2026-11-03 — 칠발도·영일만항 초기 개체군(`InitPop` 0 / 1) 비교
+보고서: [docs/reports/2026-11-03_01_initpop-sites-result.md](docs/reports/2026-11-03_01_initpop-sites-result.md)
+
+#### Notes
+- 코드 변경 없음. 계산용 PC 작업 `20261101_223606_initpop_cmp`(DE 100 × 300, `DEUpdate` 2, `Workers` 4 × `NCPU` 4, 각 1회).
+- 칠발도: LHS 30.15 kW, 난수 31.18 kW. 영일만항: 둘 다 33.43 kW(같은 설계). LHS는 결과를 좋게 하지 않았다.
+- 서로 다른 실행이 격자 위의 같은 국소 최적점에 반복해서 도착한다(DE 72, DE 100 결과와도 같음). 네 실행 모두 논문 설계의 "다섯 기 모두 벽 옆" 영역을 평가하지 않았다.
+- 같은 난수 초기화에서 `DEUpdate` 2는 칠발도에서 즉시 교체와 같은 설계를 찾았고, 시간은 18.97 → 14.77 h(영일만항 8.13 → 4.84 h)로 줄었다.
+- 결론: 골짜기 선택 문제는 초기화가 아니라 탐색 과정(변이·교차, 다양성)에 있다. 기본값은 `InitPop` 0을 유지한다.
+
 ### 2026-11-01 — 라틴 하이퍼큐브 초기 개체군 `InitPop`
 보고서: [docs/reports/2026-11-01_03_lhs-initial-population.md](docs/reports/2026-11-01_03_lhs-initial-population.md)
 
