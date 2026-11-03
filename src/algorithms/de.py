@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from src.algorithms.common import CachedEvaluator, OptimizationLogger, initial_population, quantize_vector
+from src.algorithms.common import CachedEvaluator, OptimizationLogger, quantize_vector, random_grid_population
 from src.algorithms.progress import GenerationProgress
 
 DE_UPDATES = ("immediate", "generation", "block")
@@ -49,7 +49,7 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
     progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 개체군 생성
-    population = initial_population(pop_size, config)
+    population = random_grid_population(pop_size, config)
 
     best_x, best_f, best_p = None, -np.inf, []
     gens_done = 0

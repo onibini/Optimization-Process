@@ -7,8 +7,8 @@ from src.algorithms.common import (
     OptimizationLogger,
     canonical_copy,
     get_step_size,
-    initial_population,
     quantize_vector,
+    random_grid_population,
 )
 from src.algorithms.progress import GenerationProgress
 
@@ -39,7 +39,7 @@ def run_pso(config, eval_func, pop_size, max_iter, w=0.5, c1=1.5, c2=1.5):
     progress = GenerationProgress(max_iter, pop_size)
 
     # 1. 초기 군집 생성
-    positions = initial_population(pop_size, config)
+    positions = random_grid_population(pop_size, config)
 
     step_size = get_step_size(config)
     v_max = np.maximum((upper_bounds - lower_bounds) * 0.2, step_size)

@@ -3,7 +3,6 @@ import sys
 import numpy as np
 
 from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
-from src.algorithms.common import DEFAULT_INIT_POP, INIT_POPULATIONS, check_init_pop
 from src.algorithms.de import update_block_size
 from src.physics.mesh_axisymmetric_shape import (
     DEFAULT_QUARTER_PANELS,
@@ -195,18 +194,6 @@ def main(cfg_path="config.cfg"):
     pop_size = int(cfg["AlgorithmSettings"]["PopSize"])
     max_iter = int(cfg["AlgorithmSettings"]["MaxIter"])
     algo_settings = cfg["AlgorithmSettings"]
-    try:
-        init_pop = check_init_pop(int(algo_settings.get("InitPop", DEFAULT_INIT_POP)))
-    except ValueError as err:
-        print(f"Error: {err}")
-        sys.exit(1)
-    problem_config["init_pop"] = init_pop
-    if algo_type == 4:
-        if init_pop != DEFAULT_INIT_POP:
-            print("Note: InitPop is ignored by CMA-ES (it starts from one random mean, not a population).")
-    else:
-        print(f"Initial population: {INIT_POPULATIONS[init_pop]}")
-
     try:
         de_update = DE_UPDATE_SWITCH[int(algo_settings.get("DEUpdate", 0))]
     except KeyError:

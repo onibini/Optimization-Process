@@ -12,7 +12,7 @@ site failed.
 ``--variants`` repeats all sites for several settings, one variant after another; each variant is a comma-separated
 list of ``Key=Value`` replacements (``config_v<k>_site<N>.cfg``)::
 
-    -ScriptArgs "--sites 2 3 --variants InitPop=1 InitPop=0"
+    -ScriptArgs "--sites 2 3 --variants DEUpdate=0 DEUpdate=2"
 """
 
 import argparse
@@ -43,7 +43,7 @@ def site_config(text, site_id):
 
 
 def parse_variant(spec):
-    """``"InitPop=1,DEUpdate=2"`` -> ``[("InitPop", "1"), ("DEUpdate", "2")]``."""
+    """``"DEUpdate=2,PopSize=72"`` -> ``[("DEUpdate", "2"), ("PopSize", "72")]``."""
     pairs = []
     for item in filter(None, spec.split(",")):
         key, sep, value = item.partition("=")
@@ -57,7 +57,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--sites", nargs="+", type=int, required=True, help="SiteID values (data/env_data.csv)")
     parser.add_argument("--config", default="config.cfg")
-    parser.add_argument("--variants", nargs="+", default=None, help="settings run one after another, e.g. InitPop=1")
+    parser.add_argument("--variants", nargs="+", default=None, help="settings run one after another, e.g. DEUpdate=2")
     args = parser.parse_args(argv)
 
     with open(args.config, encoding="utf-8") as f:

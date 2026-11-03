@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### 2026-11-04 — 라틴 하이퍼큐브 초기 개체군 `InitPop` 제거
+보고서: [docs/reports/2026-11-04_01_remove-lhs-initial-population.md](docs/reports/2026-11-04_01_remove-lhs-initial-population.md)
+
+#### Removed
+- `[AlgorithmSettings] InitPop`와 `common.lhs_grid_population`, `initial_population`, `check_init_pop`. DE, PSO, GA, DEPSO는 다시 `random_grid_population`을 직접 부른다.
+- `algorithm_benchmark.py`의 `de_lhs`, `depso_lhs`. `tests/test_init_population.py`.
+
+#### Notes
+- 벤치마크와 실제 해역(칠발도, 영일만항) 모두에서 효과가 없어서 사용자 결정으로 제거했다.
+- 기본값(`InitPop` 0)과 결과가 같다. 예전 설정 파일의 `InitPop` 줄은 무시된다.
+- `summary.csv`의 `init_pop` 칸은 2026-11-03 비교 작업 구분용으로 남겼다.
+
 ### 2026-11-03 — 칠발도·영일만항 초기 개체군(`InitPop` 0 / 1) 비교
 보고서: [docs/reports/2026-11-03_01_initpop-sites-result.md](docs/reports/2026-11-03_01_initpop-sites-result.md)
 

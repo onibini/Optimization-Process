@@ -84,7 +84,7 @@ def summarize_job(job_dir):
         row["num_wecs"] = cfg.get("WEC Parameters", {}).get("NumWECs", "")
         row["pop_size"] = algo.get("PopSize", "")
         row["max_iter"] = algo.get("MaxIter", "")
-        row["init_pop"] = algo.get("InitPop", "")
+        row["init_pop"] = algo.get("InitPop", "")  # 2026-11 LHS 비교 작업 구분용(옵션은 제거됨)
         row["de_update"] = algo.get("DEUpdate", "")
         row["workers"] = wamit.get("Workers", "")
         row["mesh_panels"] = wamit.get("MeshPanels", "")

@@ -56,41 +56,6 @@ def random_grid_population(pop_size, config):
     return np.round(lower_bounds + random_indices * step_size, 10)
 
 
-def lhs_grid_population(pop_size, config):
-    """라틴 하이퍼큐브(LHS) 초기 개체군을 격자 위에 만듭니다.
-
-    변수마다 격자 인덱스 범위를 ``pop_size``개의 같은 폭 구간으로 나누고, 구간마다 한 점을 무작위로 뽑은 뒤
-    구간 순서를 변수마다 따로 섞습니다. 그래서 어느 변수를 보아도 범위 전체에 한 점씩 고르게 퍼집니다
-    (McKay, Beckman & Conover 1979). 격자 점 수가 ``pop_size``보다 적으면 같은 격자 점이 여러 번 나올 수 있습니다.
-    """
-    lower_bounds, _ = get_bounds(config)
-    step_size = get_step_size(config)
-    max_indices = grid_max_indices(config)
-    indices = np.empty((pop_size, len(max_indices)), dtype=int)
-    for j, max_idx in enumerate(max_indices):
-        u = (np.random.permutation(pop_size) + np.random.rand(pop_size)) / pop_size  # 구간마다 한 점, [0, 1)
-        indices[:, j] = np.minimum(np.floor(u * (max_idx + 1)).astype(int), max_idx)
-    return np.round(lower_bounds + indices * step_size, 10)
-
-
-INIT_POPULATIONS = {0: "random", 1: "Latin hypercube"}
-DEFAULT_INIT_POP = 0
-
-
-def check_init_pop(init_pop):
-    """InitPop 값을 검증합니다 (0: 균등 난수, 1: 라틴 하이퍼큐브)."""
-    if isinstance(init_pop, bool) or init_pop not in INIT_POPULATIONS:
-        raise ValueError(f"InitPop must be one of {sorted(INIT_POPULATIONS)} ({INIT_POPULATIONS}), got {init_pop!r}")
-    return init_pop
-
-
-def initial_population(pop_size, config):
-    """설정(``init_pop``)에 따라 격자 위 초기 개체군을 만듭니다. 기본 0은 예전과 같은 균등 난수입니다."""
-    if check_init_pop(config.get("init_pop") or DEFAULT_INIT_POP) == 1:
-        return lhs_grid_population(pop_size, config)
-    return random_grid_population(pop_size, config)
-
-
 def make_cache_key(vector, config):
     lower_bounds, _ = get_bounds(config)
     step_size = get_step_size(config)
