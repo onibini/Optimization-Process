@@ -2,7 +2,13 @@ import time
 
 import numpy as np
 
-from src.algorithms.common import CachedEvaluator, OptimizationLogger, quantize_vector, random_grid_population
+from src.algorithms.common import (
+    CachedEvaluator,
+    OptimizationLogger,
+    canonical_copy,
+    quantize_vector,
+    random_grid_population,
+)
 from src.algorithms.progress import GenerationProgress
 
 DE_UPDATES = ("immediate", "generation", "block")
@@ -36,6 +42,11 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
         (docs/reports/2026-11-01_02 보고서).
         세 방식은 같은 난수열을 씁니다.
     :return: (최적 설계 변수, 최적 발전량)
+
+    평가와 캐시는 대칭 정렬한 '사본'으로 하고, 개체군에는 정렬하지 않은 벡터를 그대로 둡니다(논문 계산과 같음).
+    정렬된 벡터를 개체군에 넣으면 두 대칭 쌍의 x가 비슷할 때(예: 둘 다 벽 옆) 작은 변화에도 쌍의 순서가 뒤바뀌어
+    개체끼리 같은 자리에 다른 쌍의 값이 들어가므로, 차분 변이가 두 쌍을 따로 다듬지 못합니다
+    (docs/reports/2026-11-04_02 보고서). 돌려주는 최적 설계는 정렬된 형태입니다.
     """
     if pop_size < 4:
         raise ValueError("DE/rand/1 requires PopSize >= 4.")
@@ -58,14 +69,14 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
         fitness = []
         ind_powers_pop = []
         progress.start(0, pop_size)
-        # 행 뷰라 제자리 정렬이 개체군에 반영됨
-        for score, p_list in evaluator.evaluate_batch(list(population), on_result=progress.advance):
+        evaluated = [canonical_copy(ind, config) for ind in population]
+        for score, p_list in evaluator.evaluate_batch(evaluated, on_result=progress.advance):
             fitness.append(score)
             ind_powers_pop.append(p_list)
 
         fitness = np.array(fitness)
         best_idx = np.argmax(fitness)
-        best_x = population[best_idx].copy()
+        best_x = evaluated[best_idx].copy()
         best_f = fitness[best_idx]
         best_p = ind_powers_pop[best_idx]
 
@@ -93,20 +104,21 @@ def run_de(config, eval_func, pop_size, max_iter, F, CR, update="immediate"):
                     trial = np.where(cross_points, mutant, population[i])
                     trials.append(quantize_vector(trial, config))
 
+                evaluated = [canonical_copy(trial, config) for trial in trials]
                 if block == 1:
-                    results = [evaluator.evaluate(trials[0])]
+                    results = [evaluator.evaluate(evaluated[0])]
                     progress.advance(results[0][0])
                 else:
-                    results = evaluator.evaluate_batch(trials, on_result=progress.advance)
+                    results = evaluator.evaluate_batch(evaluated, on_result=progress.advance)
 
                 # Selection: 묶음이 끝나면 바로 교체 (다음 묶음의 변이가 바뀐 개체를 씀)
-                for i, trial, (score, p_list) in zip(members, trials, results, strict=True):
+                for i, trial, canon, (score, p_list) in zip(members, trials, evaluated, results, strict=True):
                     if score > fitness[i]:
                         fitness[i] = score
                         population[i] = trial
                         if score > best_f:
                             best_f = score
-                            best_x = trial.copy()
+                            best_x = canon.copy()
                             best_p = p_list
 
             gen_time = time.time() - gen_start

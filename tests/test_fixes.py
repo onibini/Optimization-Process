@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from unittest import mock
 
 import numpy as np
 
@@ -17,7 +18,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.algorithms import run_cma_es, run_de, run_depso, run_ga, run_pso
 from src.algorithms.common import CachedEvaluator, OptimizationLogger
 from src.physics.wamit_handler import WamitRunError, run_wamit
-from src.utils import PENALTY_FACTOR, check_min_distance, decode_symmetric_positions, penalty_result
+from src.utils import (
+    PENALTY_FACTOR,
+    canonicalize_vector_inplace,
+    check_min_distance,
+    decode_symmetric_positions,
+    penalty_result,
+)
 from src.utils.config_parser import ConfigParseError, parse_wec_cfg
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -205,6 +212,33 @@ class TestCanonicalConsistency(InTempDir):
         with redirect_stdout(io.StringIO()):
             run_pso(LAYOUT5, recording_eval, pop_size=10, max_iter=5)
         self.assertTrue(all(self._is_canonical(v) for v in seen))
+
+    def test_de_population_is_not_reordered(self):
+        """DE는 정렬된 사본으로 평가하고 개체군은 정렬하지 않음: 정렬을 아예 끈 DE(논문 계산)와 궤적이 같아야 함."""
+
+        def symmetric_eval(vector, config):
+            v = np.array(vector, dtype=float)
+            canonicalize_vector_inplace(v, config["opt_mode"], config["num_wecs"])
+            return dummy_layout_eval(v, config)
+
+        def run(seen):
+            def recording_eval(vector, config):
+                seen.append(vector.copy())
+                return symmetric_eval(vector, config)
+
+            np.random.seed(7)
+            with redirect_stdout(io.StringIO()):
+                return run_de(LAYOUT5, recording_eval, pop_size=12, max_iter=15, F=0.5, CR=0.9)
+
+        seen, seen_unsorted = [], []
+        best_x, best_f = run(seen)
+        with mock.patch("src.algorithms.common.canonicalize_vector_inplace", lambda *args: None):
+            best_x_unsorted, best_f_unsorted = run(seen_unsorted)
+        canonicalize_vector_inplace(best_x_unsorted, 2, 5)
+        self.assertEqual(best_f, best_f_unsorted)
+        np.testing.assert_array_equal(best_x, best_x_unsorted)
+        self.assertTrue(all(self._is_canonical(v) for v in seen))
+        self.assertFalse(all(self._is_canonical(v) for v in seen_unsorted))
 
 
 # ---------------------------------------------------------------------------
