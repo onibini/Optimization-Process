@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### 2026-11-04 — DE 개체군에 대칭 쌍 정렬을 쓰지 않음
+보고서: [docs/reports/2026-11-04_02_de-unsorted-population.md](docs/reports/2026-11-04_02_de-unsorted-population.md)
+
+#### Fixed
+- `run_de`가 정렬한 사본(`canonical_copy`)으로 평가하고 캐시를 조회한다. 개체군에는 정렬하지 않은 시험 벡터를 둔다(PSO·CMA-ES·DEPSO와 같은 방식, 논문 계산과 같음).
+  - 이전에는 평가기가 시험 벡터를 제자리에서 정렬했다. 두 쌍의 x가 비슷하면(벽 옆) 개체마다 쌍 순서가 달라졌고, 차분 변이가 두 쌍의 값을 섞었다.
+- `tests/test_fixes.py`: 정렬을 끈 DE와 궤적이 같은지 확인하는 테스트.
+
+#### Notes
+- 논문 때 코드(12fe7c3, ITTC)는 논문 Table 4를 소수점까지 재현한다. 지금 코드는 0.5~1% 낮지만 설계 순위는 같다.
+- 논문 로그에서 쌍 순서가 정렬 반대인 시험 벡터는 30~45%로, 정렬하지 않았다.
+- 대칭 시험 문제에서 벽 옆 최적점을 찾은 횟수: 7/100 → 15/100(p = 0.11). 실제 해역 검증 계산 `20261104_050221_de_nosort_sites21` 진행 중.
+- 평가와 WAMIT 입력은 같다. 같은 시드여도 DE 결과는 달라진다.
+
 ### 2026-11-04 — 라틴 하이퍼큐브 초기 개체군 `InitPop` 제거
 보고서: [docs/reports/2026-11-04_01_remove-lhs-initial-population.md](docs/reports/2026-11-04_01_remove-lhs-initial-population.md)
 
