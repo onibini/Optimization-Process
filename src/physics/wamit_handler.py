@@ -322,7 +322,7 @@ def write_config_cfg(workspace_dir, opt_mode, solver=DEFAULT_SOLVER, vertical_wa
         f.write(f"ISOLVE={solver}\n")
         f.write(f"MAXITT={MAXITT}\n")
         f.write("ISCATT=0\n")
-        f.write("IALTERC=1\n")
+        f.write("IALTFRC=1\n")
         f.write("ILOC=1\n")
 
 

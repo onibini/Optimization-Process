@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 2026-11-05 — wec.cfg의 IALTFRC 철자 수정
+보고서: [docs/reports/2026-11-05_03_wamit-cfg-keywords.md](docs/reports/2026-11-05_03_wamit-cfg-keywords.md)
+
+#### Fixed
+- `wec.cfg`의 `IALTERC=1`을 WAMIT 매뉴얼의 이름 `IALTFRC=1`로 고쳤다. 기본값과 같아서 해석 결과는 그대로이고 `EVAL_VERSION`도 그대로다.
+
+#### Verified
+- `wec.cfg`의 `ILOC=1`도 매뉴얼에 없는 이름이라 무시되고, 지금까지의 계산은 `ILOG=0`이었다. `ILOG=1`이면 설계 1개에서 총 출력이 −0.002% 달라진다. 이 줄은 고치지 않았고 사용자 결정 대기다.
+
 ### 2026-11-05 — PTO 감쇠 규칙 검토
 보고서: [docs/reports/2026-11-05_02_pto-rule-review.md](docs/reports/2026-11-05_02_pto-rule-review.md)
 

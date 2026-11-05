@@ -78,6 +78,14 @@ class TestWallAndSolverSettings(unittest.TestCase):
         self.assertEqual(self._iwallx(3, 0), "IWALLX0=0")
         self.assertEqual(self._iwallx(1, 1), "IWALLX0=0")  # geometry mode is always open sea
 
+    def test_frc_format_keyword_is_spelled_for_wamit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_config_cfg(tmp, 3)
+            with open(os.path.join(tmp, "wec.cfg")) as f:
+                lines = f.read().splitlines()
+        self.assertIn("IALTFRC=1", lines)
+        self.assertNotIn("IALTERC=1", lines)
+
     def test_wall_enabled(self):
         self.assertFalse(solvers.wall_enabled({"opt_mode": 1, "vertical_wall": 1}))
         self.assertTrue(solvers.wall_enabled({"opt_mode": 3}))
