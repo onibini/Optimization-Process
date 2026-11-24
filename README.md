@@ -1,0 +1,143 @@
+<div align="center">
+
+# WEC Array Shape & Layout Optimization
+
+**Simultaneous geometry and layout optimization of heaving point-absorber wave energy converters (WECs) in front of a vertical wall, with WAMIT (or open-source Capytaine) hydrodynamics and metaheuristic optimizers.**
+
+[![Python Unit Tests](https://github.com/onibini/Optimization-Process/actions/workflows/python-tests.yml/badge.svg)](https://github.com/onibini/Optimization-Process/actions/workflows/python-tests.yml)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)
+![Solver](https://img.shields.io/badge/hydrodynamics-WAMIT%20v7-1b2a49)
+[![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+[**User manual (Korean)**](docs/manual_ko.md) · [Architecture](docs/architecture.md) · [Algorithms](docs/algorithms_and_problems.md)
+
+<img src="docs/images/overview.png" alt="5-WEC array in front of a vertical wall and the cylinder-hemisphere WEC" width="900">
+
+</div>
+
+---
+
+## Why this project
+
+Five heaving buoys in front of a breakwater interact with each other and with the waves reflected by the wall. The best buoy **shape** depends on the **layout** and the other way round, so optimizing them one after the other misses designs that only a **simultaneous** search finds. This repository searches both at once: radius *R*, draft *D* and the positions of the WECs, scored by the time-averaged power of the whole array in the irregular sea of a real site.
+
+## Highlights
+
+| | |
+| :--- | :--- |
+| **Optimizers** | Differential Evolution (default), PSO, GA, CMA-ES and DEPSO (the DE + PSO hybrid of [Lee et al., 2026](#citation)) |
+| **WEC shapes** | Cylinder with a hemispherical bottom (default) or cylinder with a flat bottom; both described by radius *R* and draft *D* with automatic quarter-model meshes |
+| **Hydrodynamics** | WAMIT v7 radiation/diffraction with a vertical wall (`IWALLX0`), iterative solver; or the open-source [Capytaine](https://github.com/capytaine/capytaine) BEM for open-sea cases (no license needed, same mesh, agrees with WAMIT within about 0.5% in power) |
+| **Power model** | Coupled heave RAOs of all bodies, linear PTO damping taken at each body's natural frequency, JONSWAP (ITTC / Goda) or Pierson-Moskowitz spectrum |
+| **Search space** | Symmetric layouts on a 0.1 m grid; canonical ordering removes duplicate layouts; an evaluation cache never runs WAMIT twice for the same design |
+| **Speed options** | Adaptive frequency grid around the resonance (`FreqGrid`), several WAMIT processes at the same time (`Workers`), optional remote runs on another Windows PC over SSH |
+| **Tests** | 270+ unit tests run without WAMIT (GitHub Actions on Python 3.10 and 3.12) |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[config.cfg<br/>env_data.csv] --> B[Optimizer<br/>DE · PSO · GA · CMA-ES · DEPSO]
+    B -->|design vector<br/>R, D, x, y| C{Cache /<br/>spacing check}
+    C -->|new design| D[Panel mesh<br/>of the shape]
+    D --> E[WAMIT v7 or<br/>Capytaine]
+    E --> F[Added mass, damping,<br/>exciting force]
+    F --> G[Heave RAOs + PTO<br/>power in the site spectrum]
+    G -->|array power| B
+    C -->|cached or infeasible| B
+```
+
+1. The optimizer proposes a design vector `[R, D, X1, X2, Y2, X3, Y3]` (WEC1 on the centre line, two mirrored pairs).
+2. Infeasible layouts (minimum spacing) are rejected without WAMIT; known designs come from the cache.
+3. WAMIT (or Capytaine in the open sea) computes the hydrodynamic coefficients of the bodies.
+4. The coupled heave equations give the RAOs; the PTO damping of each body equals its radiation damping at its natural frequency, the solution of omega^2 (m + A_kk(omega)) = K_kk (`PTORule` 2 keeps the older rule: the frequency-grid point with the largest uncontrolled RAO). Before the power is computed, A, B and F are interpolated (cubic spline) from the 0.05 rad/s solver frequencies to a 0.0025 rad/s grid, so narrow resonance peaks between the solver points are resolved without extra BEM frequencies.
+5. The power spectral density is integrated over the site spectrum (Simpson's rule on the 0.0025 rad/s grid) and the total array power is returned.
+
+## Quick start
+
+> Requires Python ≥ 3.10. Real runs need either WAMIT v7 (commercial, not included, Windows) or Capytaine (`pip install capytaine`, open sea only); the tests run anywhere.
+
+```bash
+git clone https://github.com/onibini/Optimization-Process.git
+cd Optimization-Process
+pip install -r requirements.txt
+python -m unittest discover -s tests     # no WAMIT needed
+python main.py                           # runs the optimization defined in config.cfg
+```
+
+The WAMIT executable is found from `WAMITPath` in `config.cfg`, then the `WAMIT_EXE` environment variable, then `C:\WAMITv7\WAMIT.exe`.
+
+## Configuration at a glance
+
+Everything is set in [`config.cfg`](config.cfg) (`value  name  - comment` per line). The full list with recommendations is in the [user manual](docs/manual_ko.md#4-설정-파일-configcfg).
+
+| Section | Key | Meaning (default) |
+| :--- | :--- | :--- |
+| `[Simulation]` | `OptMode` | 1 geometry, 2 layout, 3 geometry + layout |
+| | `Algorithm` | 1 DE, 2 PSO, 3 GA, 4 CMA-ES, 5 DEPSO |
+| | `WaveSpec` | 1 JONSWAP ITTC (default), 2 JONSWAP Goda, 3 Pierson-Moskowitz |
+| | `HydroSolver` | 1 WAMIT (default), 2 Capytaine (open sea only), 3 HydroBEM (wall supported, `WaveAngle` 0 only) |
+| | `HighOrderSpans` | 0 low order (`MeshPanels`, default); N > 0 HydroBEM higher order with N spans per patch edge (`HydroSolver` 3; `Shape` 2 analytic cylinder, `Shape` 1 cad2bem hemisphere patches in `data/hemisphere_patches.json`) |
+| `[WEC Parameters]` | `NumWECs`, `Shape`, `VerticalWall`, `WaveAngle`, `MinSpacing` | 1, 3 or 5 WECs; shape 1 cylinder + hemisphere (default) or 2 flat-bottom cylinder; wall at x = 0 on (1, default) or off; incident wave direction from the wall normal in degrees (0, written to WAMIT as `BETA = -WaveAngle`); minimum centre distance = `MinSpacing` × R (4) |
+| `[AlgorithmSettings]` | `PopSize`, `MaxIter`, `F`, `CR`, `w`, `c1`, `c2`, `SigmaInit`, `DEUpdate`, `Seed`, `DEStrategy`, `StallGens`, `StallAction`, `LocalSearchEvals`, `Resume` | population, generations and optimizer parameters; DE replacement (0 immediate, 1 generation-wise, 2 immediate in blocks of `Workers`); random seed (recorded in the logs); optional DE mutation strategy, stall handling, final local search and resuming from a checkpoint (all off by default) |
+| `[Constraints]` | `RadiusMin/Max`, `DraftMin/Max`, `WECn_X/YMin/Max`, `StepSize` | search ranges (all positive) and grid step (0.1 m) |
+| `[Environment]` | `SiteID` | row of [`data/env_data.csv`](data/env_data.csv) (Hs, Tp, γ, depth) |
+| `[WAMIT Settings]` | `MeshPanels` (120), `Solver` (0), `OmegaMax` (3.0), `FreqGrid` (0), `Workers` (1), `EvalCache` (0), `NCPU` | mesh, solver, frequency grid, parallel runs and reuse of stored evaluations (`data/eval_db`, built by `scripts/build_eval_db.py`) |
+
+Sites included: **Buan** (Hs 1.07 m, Tp 5.46 s, 50 m), **Chilbaldo** (0.87 m, 4.48 s, 33 m), **Yeongilmanhang** (0.92 m, 6.66 s, 13 m).
+
+## Repository layout
+
+```
+├── main.py / config.cfg        # entry point and settings
+├── data/env_data.csv           # wave conditions of the sites
+├── src/
+│   ├── algorithms/             # DE, PSO, GA, CMA-ES, DEPSO + cache, logging, parallel evaluation
+│   ├── problems/               # geometry, layout and joint problems
+│   ├── physics/                # WAMIT I/O, mesh, RAO, wave spectra, power
+│   └── utils/                  # config parser, validation, symmetric layout mapping
+├── scripts/                    # remote runs (remote.ps1), live progress, evaluation database, standalone packages
+├── tests/                      # unit tests (no WAMIT needed)
+└── docs/                       # manual, architecture, algorithms, conventions, remote runs
+```
+
+Run outputs go to `logs/` (per run: config, every evaluated design, best per generation, summary) and WAMIT files to `workspace/`; both are ignored by Git.
+
+## Documentation
+
+- [User manual (Korean)](docs/manual_ko.md) — installation, every setting, outputs, remote runs, troubleshooting
+- [Algorithms and problems](docs/algorithms_and_problems.md) · [Architecture](docs/architecture.md) · [Conventions](docs/conventions.md)
+- [Remote runs over SSH (optional)](docs/remote_compute.md)
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests
+ruff check . && ruff format --check .
+```
+
+GitHub Actions runs lint and tests on Python 3.10 and 3.12 for every push and pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Citation
+
+If you use this code, please cite:
+
+> Lee, O.-B., Heo, S., Koo, W. (2026). Metaheuristic-based layout optimization of multiple heaving point-absorber wave energy converters near a vertical wall. *Ocean Engineering*, 355, 125173. https://doi.org/10.1016/j.oceaneng.2026.125173
+
+```bibtex
+@article{Lee2026WECLayout,
+  author  = {Lee, O.-B. and Heo, S. and Koo, W.},
+  title   = {Metaheuristic-based layout optimization of multiple heaving point-absorber wave energy converters near a vertical wall},
+  journal = {Ocean Engineering},
+  volume  = {355},
+  pages   = {125173},
+  year    = {2026},
+  doi     = {10.1016/j.oceaneng.2026.125173}
+}
+```
+
+## License
+
+[MIT](LICENSE). WAMIT is a commercial product of WAMIT, Inc. and is not distributed with this repository.

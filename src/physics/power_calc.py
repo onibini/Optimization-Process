@@ -1,0 +1,63 @@
+import warnings
+
+import numpy as np
+from scipy.integrate import simpson
+
+from src.physics.hydro import refine_hydro
+from src.physics.rao_calc import PTO_RAO_PEAK, rao_from_hydro
+from src.physics.wave_spectrum import get_jonswap_spectrum
+
+# 주파수 격자의 마지막 점에서 발전 밀도가 최대값의 이 비율을 넘으면 상한이 응답을 자른 것으로 봅니다.
+TRUNCATION_WARN_RATIO = 0.05
+
+
+def calculate_power(rao_results, config):
+    """
+    RAO 결과와 해양 스펙트럼(JONSWAP)을 심슨 법칙으로 적분하여 최종 발전량을 산출합니다.
+    """
+
+    # 1. 해양 환경 데이터 추출
+    hs = float(config["hs"])  # Significant Wave Height (m)
+    tp = float(config["tp"])  # Peak Period (s)
+    gamma = float(config["gamma"])
+    wave_spec = int(config["wave_spec"])
+
+    # 2. 주파수 배열 추출
+    omegas = np.array([res["omega"] for res in rao_results])
+
+    # 3. JONSWAP 스펙트럼 계산
+    S_wave = get_jonswap_spectrum(omegas, hs, tp, gamma, wave_spec)
+
+    num_wecs = len(rao_results[0]["rao_abs"])
+    total_power = 0.0
+    individual_powers = []
+
+    # 4. 각 WEC에 대해 RAO와 스펙트럼을 곱하여 발전량 계산
+    for k in range(num_wecs):
+        b_pto = rao_results[0]["b_pto"][k]  # PTO 감쇠 계수 (튜닝된 값)
+        rao_abs = np.array([res["rao_abs"][k] for res in rao_results])  # RAO 진폭 배열
+
+        # 주파수별 발전량 계산
+        power_density = b_pto * (omegas**2) * (rao_abs**2) * S_wave
+        wec_power = simpson(y=power_density, x=omegas)  # 심슨 법칙으로 적분
+
+        individual_powers.append(wec_power)
+        total_power += wec_power
+
+        if power_density.max() > 0 and power_density[-1] > TRUNCATION_WARN_RATIO * power_density.max():
+            warnings.warn(
+                "Power density is not negligible at the highest WAMIT frequency; OmegaMax may truncate the "
+                "response (small or shallow bodies resonate at high frequency). Consider a larger OmegaMax.",
+                stacklevel=2,
+            )
+
+    return total_power, individual_powers
+
+
+def power_from_hydro(hydro, config):
+    """수력 계수에서 PTO 감쇠, RAO, 발전량까지 계산합니다.
+
+    먼저 ``refine_hydro``로 A, B, F를 0.0025 rad/s 간격까지 보간합니다.
+    """
+    hydro = refine_hydro(hydro)
+    return calculate_power(rao_from_hydro(hydro, config.get("pto_rule", PTO_RAO_PEAK)), config)
